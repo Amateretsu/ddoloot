@@ -1,6 +1,6 @@
 # DDOLoot
 
-[![CI](https://github.com/Amateretsu/ddoloot/actions/workflows/ci.yml/badge.svg)](https://github.com/Amateretsu/ddoloot/actions/workflows/ci.yml)
+[![CI](https://github.com/Amateretsu/ddoloot/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/Amateretsu/ddoloot/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Amateretsu/ddoloot/branch/main/graph/badge.svg)](https://codecov.io/gh/Amateretsu/ddoloot)
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
