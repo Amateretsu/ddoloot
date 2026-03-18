@@ -42,7 +42,7 @@ from ddo_sync.page_discovery import UpdatePageDiscoverer
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.syncer import DDOSyncer
 
-# ── Default database paths (relative to project root) ────────────────────────
+# ── Default database paths ────────────────────────────────────────────────────
 _ROOT    = Path(__file__).resolve().parent.parent.parent  # …/src/ddo_sync → root
 DATA_DIR = _ROOT / "data"
 LOOT_DB  = DATA_DIR / "loot.db"
@@ -51,7 +51,7 @@ QUEUE_DB = DATA_DIR / "queue.db"
 WIKI_URL_BASE = "https://ddowiki.com/page/Item:"
 
 
-# ── CLI ───────────────────────────────────────────────────────────────────────
+# ── CLI ──────────────────────────────────────────────────────────────────────
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -122,7 +122,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return p
 
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+# ── Logging ──────────────────────────────────────────────────────────────────
 
 def _configure_logging(verbose: bool) -> None:
     logger.remove()
@@ -138,7 +138,7 @@ def _configure_logging(verbose: bool) -> None:
     )
 
 
-# ── Mode handlers ─────────────────────────────────────────────────────────────
+# ── Mode handlers ────────────────────────────────────────────────────────────
 
 def _cmd_status() -> int:
     if not QUEUE_DB.exists():
@@ -199,7 +199,7 @@ def _cmd_sync(
 ) -> int:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # ── Resolve page list ──────────────────────────────────────────────────────
+    # ── Resolve page list ────────────────────────────────────────────────────
     if page_names:
         pages = [n.replace(" ", "_") for n in page_names]
         logger.info(f"Targeting {len(pages)} specific update page(s).")
@@ -215,7 +215,7 @@ def _cmd_sync(
             return 0
         logger.info(f"Discovered {len(pages)} update page(s).")
 
-    # ── Wire up components ─────────────────────────────────────────────────────
+    # ── Wire up components ───────────────────────────────────────────────────
     fetcher_config = WikiFetcherConfig(
         rate_limit_delay=max(1.0, rate_limit),
         max_retries=3,

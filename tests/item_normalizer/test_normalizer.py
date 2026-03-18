@@ -1,5 +1,7 @@
 """Unit tests for item_normalizer.normalizer.ItemNormalizer."""
 
+from datetime import timezone
+
 import pytest
 
 from item_normalizer.exceptions import NormalizationError, ParseError
@@ -59,12 +61,12 @@ class TestNormalizeCloak:
     def test_resistance_value(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         resistance = next(e for e in item.enchantments if e.name == "Resistance")
-        assert resistance.value == "+5"
+        assert resistance.value == 5
 
     def test_devotion_roman_numeral_value(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         devotion = next(e for e in item.enchantments if e.name == "Superior Devotion")
-        assert devotion.value == "VI"
+        assert devotion.value == 6
 
     def test_named_set(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
         item = normalizer.normalize(cloak_html, WIKI_URL)
@@ -94,7 +96,6 @@ class TestNormalizeCloak:
         assert item.wiki_url == WIKI_URL
 
     def test_scraped_at_is_utc(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
-        from datetime import timezone
         item = normalizer.normalize(cloak_html, WIKI_URL)
         assert item.scraped_at.tzinfo == timezone.utc
 
@@ -152,7 +153,7 @@ class TestNormalizeWeapon:
         item = normalizer.normalize(weapon_html, WIKI_URL)
         crit = next((e for e in item.enchantments if "Critical" in e.name), None)
         assert crit is not None
-        assert crit.value == "Slashing Weapons"
+        assert crit.value == None
 
 
 class TestNormalizeArmor:

@@ -281,7 +281,7 @@ class ItemNormalizer:
             List of Enchantment instances
 
         Example:
-            >>> normalizer._parse_enchantments(["Resistance +5", "Metalline", "Superior Devotion VI"])
+            >>> normalizer._parse_enchantments(["Resistance +5", "Superior Devotion VI"])
             [Enchantment(name='Resistance', value=5),
              Enchantment(name='Metalline', value=None),
              Enchantment(name='Superior Devotion', value=6)]
@@ -295,7 +295,9 @@ class ItemNormalizer:
             # Strategy 1: colon separator ("Resistance: +5")
             if ": " in raw:
                 name, _, value_str = raw.partition(": ")
-                result.append(Enchantment(name=name.strip(), value=self._suffix_to_int(value_str.strip())))
+                result.append(
+                    Enchantment(name=name.strip(), value=self._suffix_to_int(value_str.strip()))
+                )
                 continue
 
             # Strategy 2: trailing numeric or Roman numeral suffix
@@ -331,7 +333,9 @@ class ItemNormalizer:
             >>> normalizer._parse_weapon_stats(fields)
             WeaponStats(damage_dice='1d8', damage_bonus=5, ...)
         """
-        weapon_keys = {"damage", "critical_roll", "handedness", "proficiency", "weapon_type", "enchantment_bonus"}
+        weapon_keys = {
+            "damage", "critical_roll", "handedness", "proficiency", "weapon_type", "enchantment_bonus",
+        }
         if not weapon_keys.intersection(fields):
             return None
 
@@ -368,7 +372,9 @@ class ItemNormalizer:
             damage_type=damage_type,
             critical_range=critical_range,
             critical_multiplier=critical_multiplier,
-            enchantment_bonus=self._coerce_int("enchantment_bonus", fields.get("enchantment_bonus")),
+            enchantment_bonus=self._coerce_int(
+                "enchantment_bonus", fields.get("enchantment_bonus")
+            ),
             handedness=fields.get("handedness"),
             proficiency=fields.get("proficiency"),
             weapon_type=fields.get("weapon_type"),
@@ -388,7 +394,9 @@ class ItemNormalizer:
             >>> normalizer._parse_armor_stats(fields)
             ArmorStats(armor_type='Heavy', armor_bonus=9, ...)
         """
-        armor_keys = {"armor_type", "armor_bonus", "max_dex_bonus", "armor_check_penalty", "arcane_spell_failure"}
+        armor_keys = {
+            "armor_type", "armor_bonus", "max_dex_bonus", "armor_check_penalty", "arcane_spell_failure",
+        }
         if not armor_keys.intersection(fields):
             return None
 
@@ -396,8 +404,12 @@ class ItemNormalizer:
             armor_type=fields.get("armor_type"),
             armor_bonus=self._coerce_int("armor_bonus", fields.get("armor_bonus")),
             max_dex_bonus=self._coerce_int("max_dex_bonus", fields.get("max_dex_bonus")),
-            armor_check_penalty=self._coerce_int("armor_check_penalty", fields.get("armor_check_penalty")),
-            arcane_spell_failure=self._coerce_percent("arcane_spell_failure", fields.get("arcane_spell_failure")),
+            armor_check_penalty=self._coerce_int(
+                "armor_check_penalty", fields.get("armor_check_penalty")
+            ),
+            arcane_spell_failure=self._coerce_percent(
+                "arcane_spell_failure", fields.get("arcane_spell_failure")
+            ),
         )
 
     def _parse_source(self, location_raw: Optional[str]) -> Optional[ItemSource]:

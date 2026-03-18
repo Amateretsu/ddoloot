@@ -220,7 +220,8 @@ class WikiPageParser:
             >>> infobox is not None
             True
         """
-        logger.debug(f"Found table(s): {True if soup.find_all("table", class_="wikitable") else False}")
+        has_wikitable = bool(soup.find_all("table", class_="wikitable"))
+        logger.debug(f"Found table(s): {has_wikitable}")
         return soup.find_all("table")
 
     def _extract_infobox_fields(self, tables: list) -> ParsedFields:
@@ -248,31 +249,32 @@ class WikiPageParser:
         fields: ParsedFields = {}
         cnt = 0
 
-        logger.debug(f"Processing {len(tables)} table(s)...")        
+        logger.debug(f"Processing {len(tables)} table(s)...")
         for table in tables:
             cnt += 1
-            logger.debug(f"Found {len(table.find_all("tr"))} row(s) in table {cnt}.")
+            row_count = len(table.find_all("tr"))
+            logger.debug(f"Found {row_count} row(s) in table {cnt}.")
             for row in table.find_all("tr"):
                 th = row.find("th")
                 td = row.find("td")
 
                 if not th or not td:
                     continue
-                                
+
                 raw_key = th.get_text(strip=True).rstrip(":").strip().lower()
                 canonical = FIELD_ALIASES.get(raw_key)
 
                 if canonical is None:
                     logger.warning(f"Unknown infobox field ignored: {raw_key!r}")
                     continue
-                
+
                 raw_value = td.get_text(separator=" ", strip=True)
 
                 if canonical in LIST_FIELDS:
                     fields[canonical] = [v.strip() for v in raw_value.split(",") if v.strip()]
                 else:
                     fields[canonical] = raw_value
-                    
+
         return fields
 
     def _extract_enchantments(self, soup: BeautifulSoup) -> list[str]:
@@ -302,7 +304,9 @@ class WikiPageParser:
                         ul = td.find("ul")
                         if ul:
                             items = self._extract_li_texts(ul)
-                            logger.debug(f"Extracted {len(items)} enchantments (infobox th/td strategy)")
+                            logger.debug(
+                                f"Extracted {len(items)} enchantments (infobox th/td strategy)"
+                            )
                             return items
 
         # Strategy 2: standalone <b>/<strong> label followed by a <ul>

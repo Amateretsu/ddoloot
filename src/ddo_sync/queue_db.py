@@ -6,7 +6,8 @@ lazy open, context manager, explicit transactions, row_factory = sqlite3.Row.
 Example:
     >>> from ddo_sync.queue_db import QueueRepository
     >>> with QueueRepository(":memory:") as qr:
-    ...     qr.register_update_page("Update_5_named_items", "https://ddowiki.com/page/Update_5_named_items")
+    ...     qr.register_update_page("Update_5_named_items", 
+                "https://ddowiki.com/page/Update_5_named_items")
     ...     qr.enqueue_items(links)
     ...     items = qr.get_pending_items(limit=10)
 """
@@ -153,7 +154,9 @@ class QueueRepository:
             ).fetchone()
             return _row_to_update_page_status(row) if row else None
         except sqlite3.Error as exc:
-            raise QueueDbError(f"Failed to get update page status for {page_name!r}: {exc}") from exc
+            raise QueueDbError(
+                f"Failed to get update page status for {page_name!r}: {exc}"
+            ) from exc
 
     def list_update_pages(self) -> List[UpdatePageStatus]:
         """Return :class:`UpdatePageStatus` for every registered update page."""
@@ -202,7 +205,8 @@ class QueueRepository:
                         (link.item_name, link.wiki_url, link.update_page, now),
                     )
                     inserted += cursor.rowcount
-            logger.debug(f"Enqueued {inserted} new items (skipped {len(links) - inserted} duplicates)")
+            skipped = len(links) - inserted
+            logger.debug(f"Enqueued {inserted} new items (skipped {skipped} duplicates)")
             return inserted
         except sqlite3.Error as exc:
             raise QueueDbError(f"Failed to enqueue items: {exc}") from exc

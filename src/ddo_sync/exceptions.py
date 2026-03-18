@@ -39,7 +39,7 @@ class WikiApiError(DDOSyncError):
         url: The API URL that was called.
 
     Example:
-        >>> raise WikiApiError("Missing 'query' key in response", url="https://ddowiki.com/api.php")
+        >>> raise WikiApiError("Missing 'query' key", url="https://ddowiki.com/api.php")
     """
 
     def __init__(self, message: str, url: Optional[str] = None) -> None:

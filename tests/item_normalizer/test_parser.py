@@ -156,7 +156,8 @@ class TestExtractEnchantments:
 class TestExtractFlavorText:
     def test_cloak_flavor_text(self, parser: WikiPageParser, cloak_html: str) -> None:
         fields = parser.parse(cloak_html, WIKI_URL)
-        assert fields["flavor_text"] == "This cloak was woven from the fabric of the planes themselves."
+        expected = "This cloak was woven from the fabric of the planes themselves."
+        assert fields["flavor_text"] == expected
 
     def test_no_flavor_text_returns_none(
         self, parser: WikiPageParser, weapon_html: str

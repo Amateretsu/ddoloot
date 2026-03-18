@@ -452,7 +452,8 @@ class TestWikiFetcherRetries:
     @patch("time.sleep")  # Prevent exponential backoff delays during test
     @patch("ddowiki_scraper.fetcher.requests.Session.get")
     def test_retry_on_transient_error(
-        self, mock_get: Mock, _mock_sleep: Mock, default_config: WikiFetcherConfig, sample_html: str
+        self, mock_get: Mock, _mock_sleep: Mock,
+        default_config: WikiFetcherConfig, sample_html: str
     ) -> None:
         """Test that transient errors trigger retries."""
         # First two calls fail, third succeeds

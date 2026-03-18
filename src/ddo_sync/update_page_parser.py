@@ -63,7 +63,8 @@ class UpdatePageParser:
 
         Example:
             >>> parser.parse(html, "Update_5_named_items")
-            [ItemLink(item_name='Sword of Shadow', wiki_url='...', update_page='Update_5_named_items')]
+            [ItemLink(item_name='Sword of Shadow', wiki_url='...',
+             update_page='Update_5_named_items')]
         """
         if not html or not html.strip():
             raise UpdatePageError(
