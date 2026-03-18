@@ -10,19 +10,20 @@ import pytest
 from ddo_sync.models import ItemLink
 from ddo_sync.queue_db import QueueRepository
 
-
 # ── Datetime helpers ──────────────────────────────────────────────────────────
+
 
 def utc(year: int, month: int, day: int, hour: int = 0) -> datetime:
     return datetime(year, month, day, hour, tzinfo=timezone.utc)
 
 
 SYNCED_AT = utc(2025, 11, 1)
-MODIFIED_BEFORE = utc(2025, 10, 31)   # wiki older than our sync → no resync
-MODIFIED_AFTER = utc(2025, 11, 2)     # wiki newer than our sync → needs resync
+MODIFIED_BEFORE = utc(2025, 10, 31)  # wiki older than our sync → no resync
+MODIFIED_AFTER = utc(2025, 11, 2)  # wiki newer than our sync → needs resync
 
 
 # ── QueueRepository fixture ───────────────────────────────────────────────────
+
 
 @pytest.fixture
 def queue_repo() -> QueueRepository:
@@ -34,6 +35,7 @@ def queue_repo() -> QueueRepository:
 
 
 # ── ItemLink fixtures ─────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def sword_link() -> ItemLink:
@@ -83,6 +85,7 @@ EMPTY_PAGE_HTML = "<html><body><p>No items here.</p></body></html>"
 
 
 # ── MediaWiki API response fixtures ──────────────────────────────────────────
+
 
 def make_mediawiki_response(page_name: str, timestamp: str) -> dict:
     """Minimal formatversion=2 response with one revision."""

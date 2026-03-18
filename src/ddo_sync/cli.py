@@ -31,27 +31,27 @@ from typing import List, Optional
 
 from loguru import logger
 
-from ddowiki_scraper import WikiFetcher, WikiFetcherConfig
-from ddowiki_scraper.exceptions import FetchError, RobotsTxtError
-from item_db import ItemRepository
-from item_normalizer import ItemNormalizer
-
 from ddo_sync.exceptions import UpdatePageError
 from ddo_sync.models import SyncStatus
 from ddo_sync.page_discovery import UpdatePageDiscoverer
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.syncer import DDOSyncer
+from ddowiki_scraper import WikiFetcher, WikiFetcherConfig
+from ddowiki_scraper.exceptions import FetchError, RobotsTxtError
+from item_db import ItemRepository
+from item_normalizer import ItemNormalizer
 
 # ── Default database paths ────────────────────────────────────────────────────
-_ROOT    = Path(__file__).resolve().parent.parent.parent  # …/src/ddo_sync → root
+_ROOT = Path(__file__).resolve().parent.parent.parent  # …/src/ddo_sync → root
 DATA_DIR = _ROOT / "data"
-LOOT_DB  = DATA_DIR / "loot.db"
+LOOT_DB = DATA_DIR / "loot.db"
 QUEUE_DB = DATA_DIR / "queue.db"
 
 WIKI_URL_BASE = "https://ddowiki.com/page/Item:"
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
+
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -124,6 +124,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 
+
 def _configure_logging(verbose: bool) -> None:
     logger.remove()
     logger.add(
@@ -139,6 +140,7 @@ def _configure_logging(verbose: bool) -> None:
 
 
 # ── Mode handlers ────────────────────────────────────────────────────────────
+
 
 def _cmd_status() -> int:
     if not QUEUE_DB.exists():
@@ -162,8 +164,10 @@ def _cmd_status() -> int:
     logger.info("─" * 56)
     logger.info(f"  Tracked update pages ({len(pages)}):")
     for p in pages:
-        synced = p.last_synced_at.strftime("%Y-%m-%d %H:%M") if p.last_synced_at else "never"
-        flag   = "  [STALE]" if p.needs_resync else ""
+        synced = (
+            p.last_synced_at.strftime("%Y-%m-%d %H:%M") if p.last_synced_at else "never"
+        )
+        flag = "  [STALE]" if p.needs_resync else ""
         logger.info(f"    {p.page_name:<42} synced: {synced}{flag}")
     return 0
 
@@ -296,8 +300,9 @@ def _print_summary(status: SyncStatus) -> None:
 
 
 def _install_sigint_handler() -> None:
-    def _handler(sig, frame):
+    def _handler(_sig, _frame):
         raise KeyboardInterrupt
+
     signal.signal(signal.SIGINT, _handler)
 
 
@@ -314,12 +319,12 @@ def _normalize_item(item: str, upsert: bool) -> None:
     with WikiFetcher(config) as fetcher:
         try:
             html = fetcher.fetch_item_page(item)
-            print(f"Fetched {len(html):,} bytes")
-            print(f"Page title found: {item in html}")
+            print(f"Fetched {len(html):,} bytes")  # noqa: T201
+            print(f"Page title found: {item in html}")  # noqa: T201
         except RobotsTxtError as e:
-            print(f"Blocked by robots.txt: {e}")
+            print(f"Blocked by robots.txt: {e}")  # noqa: T201
         except FetchError as e:
-            print(f"Fetch failed (HTTP {e.status_code}): {e}")
+            print(f"Fetch failed (HTTP {e.status_code}): {e}")  # noqa: T201
 
         normalizer = ItemNormalizer()
         item = normalizer.normalize(html, wiki_url=f"{WIKI_URL_BASE}{item}")
@@ -334,26 +339,28 @@ def _normalize_item(item: str, upsert: bool) -> None:
         logger.debug(f"Weight        : {item.weight} lbs")
         logger.debug(f"Flavor text   : {item.flavor_text!r}")
 
-        print(f"\nEnchantments ({len(item.enchantments)}):")
+        print(f"\nEnchantments ({len(item.enchantments)}):")  # noqa: T201
         for enc in item.enchantments:
             value_str = f" {enc.value}" if enc.value else ""
-            print(f"  - {enc.name}{value_str}")
+            print(f"  - {enc.name}{value_str}")  # noqa: T201
 
         if item.named_set:
-            print(f"\nNamed set: {item.named_set.name}")
+            print(f"\nNamed set: {item.named_set.name}")  # noqa: T201
 
         if item.source:
-            print(f"Source quests: {item.source.quests}")
+            print(f"Source quests: {item.source.quests}")  # noqa: T201
 
         with ItemRepository(str(LOOT_DB)) as item_repo:
-            if (upsert):
+            if upsert:
                 item_repo.upsert(item)
                 logger.info(f"Upserted item: {item}")
             else:
                 item_repo.save(item)
                 logger.info(f"Saved item: {item}")
 
+
 # ── Entry point ───────────────────────────────────────────────────────────────
+
 
 def main() -> int:
     args = _build_parser().parse_args()

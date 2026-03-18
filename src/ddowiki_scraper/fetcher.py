@@ -9,13 +9,13 @@ retry logic, robots.txt compliance, and concurrent batch fetching capabilities.
 
 Example:
     >>> from ddowiki_scraper import WikiFetcher, WikiFetcherConfig
-    >>> 
+    >>>
     >>> # Synchronous usage
     >>> config = WikiFetcherConfig(rate_limit_delay=3.0)
     >>> with WikiFetcher(config) as fetcher:
     ...     html = fetcher.fetch_item_page("Mantle of the Worldshaper")
     ...     print(f"Fetched {len(html)} bytes")
-    >>> 
+    >>>
     >>> # Asynchronous batch usage
     >>> async def fetch_many():
     ...     async with WikiFetcher(config) as fetcher:
@@ -25,7 +25,7 @@ Example:
 """
 
 import asyncio
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote, urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -34,9 +34,9 @@ import requests
 from loguru import logger
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
 
 from ddowiki_scraper.config import WikiFetcherConfig
@@ -67,7 +67,7 @@ class WikiFetcher:
         >>> config = WikiFetcherConfig()
         >>> fetcher = WikiFetcher(config)
         >>> html = fetcher.fetch_item_page("Mantle of the Worldshaper")
-        >>> 
+        >>>
         >>> # Async with context manager
         >>> async with WikiFetcher(config) as fetcher:
         ...     html = await fetcher.fetch_item_page_async("Sword of Shadow")

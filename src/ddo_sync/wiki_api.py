@@ -91,9 +91,7 @@ class WikiApiClient:
         }
 
         try:
-            response = requests.get(
-                self._api_url, params=params, timeout=self._timeout
-            )
+            response = requests.get(self._api_url, params=params, timeout=self._timeout)
             response.raise_for_status()
         except requests.RequestException as exc:
             raise WikiApiError(
@@ -121,12 +119,16 @@ class WikiApiClient:
 
         # Page does not exist on the wiki
         if page.get("missing") or "revisions" not in page:
-            logger.debug(f"MediaWiki API: page {page_name!r} not found or has no revisions")
+            logger.debug(
+                f"MediaWiki API: page {page_name!r} not found or has no revisions"
+            )
             return None
 
         raw_ts = page["revisions"][0]["timestamp"]
         modified_at = self._normalize_timestamp(raw_ts)
-        logger.debug(f"MediaWiki API: {page_name!r} last modified at {modified_at.isoformat()}")
+        logger.debug(
+            f"MediaWiki API: {page_name!r} last modified at {modified_at.isoformat()}"
+        )
         return modified_at
 
     def _normalize_timestamp(self, raw: str) -> datetime:

@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from datetime import timezone
 
-
 from ddo_sync.models import ItemLink, QueueItem, QueueStats, UpdatePageStatus
 from ddo_sync.queue_db import QueueRepository
-
 from tests.ddo_sync.conftest import (
     MODIFIED_AFTER,
     MODIFIED_BEFORE,
@@ -23,6 +21,7 @@ PAGE_URL = "https://ddowiki.com/page/Update_5_named_items"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _register(repo: QueueRepository) -> None:
     repo.register_update_page(PAGE_NAME, PAGE_URL)
 
@@ -32,6 +31,7 @@ def _enqueue(repo: QueueRepository, links):
 
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
+
 
 class TestLifecycle:
     def test_open_and_close(self):
@@ -64,6 +64,7 @@ class TestLifecycle:
 
 
 # ── Update page management ────────────────────────────────────────────────────
+
 
 class TestRegisterUpdatePage:
     def test_registers_page(self, queue_repo):
@@ -157,14 +158,19 @@ class TestListUpdatePages:
         assert len(pages) == 2
 
     def test_ordered_alphabetically(self, queue_repo):
-        queue_repo.register_update_page("Zebra_Page", "https://ddowiki.com/page/Zebra_Page")
-        queue_repo.register_update_page("Alpha_Page", "https://ddowiki.com/page/Alpha_Page")
+        queue_repo.register_update_page(
+            "Zebra_Page", "https://ddowiki.com/page/Zebra_Page"
+        )
+        queue_repo.register_update_page(
+            "Alpha_Page", "https://ddowiki.com/page/Alpha_Page"
+        )
         pages = queue_repo.list_update_pages()
         assert pages[0].page_name == "Alpha_Page"
         assert pages[1].page_name == "Zebra_Page"
 
 
 # ── Queue writes ──────────────────────────────────────────────────────────────
+
 
 class TestEnqueueItems:
     def test_inserts_new_items(self, queue_repo, item_links):
@@ -290,8 +296,11 @@ class TestResetFailedToPending:
 
 # ── Queue reads ───────────────────────────────────────────────────────────────
 
+
 class TestGetPendingItems:
-    def test_returns_pending_only(self, queue_repo, item_links, sword_link):
+    def test_returns_pending_only(
+        self, queue_repo, item_links, sword_link  # noqa: ARG002
+    ):
         _register(queue_repo)
         _enqueue(queue_repo, item_links)
         # Mark one complete

@@ -7,7 +7,6 @@ import pytest
 from ddo_sync.exceptions import UpdatePageError
 from ddo_sync.models import ItemLink
 from ddo_sync.update_page_parser import UpdatePageParser
-
 from tests.ddo_sync.conftest import EMPTY_PAGE_HTML, UPDATE_PAGE_HTML
 
 
@@ -65,23 +64,23 @@ class TestParse:
         assert links == []
 
     def test_url_encoded_name_decoded(self, parser: UpdatePageParser):
-        html = "<a href=\"/page/Item:Ghal%27s_Ring\">Ghal's Ring</a>"
+        html = '<a href="/page/Item:Ghal%27s_Ring">Ghal\'s Ring</a>'
         links = parser.parse(html, "Update_5_named_items")
         assert links[0].item_name == "Ghal's Ring"
 
     def test_underscores_replaced_by_spaces(self, parser: UpdatePageParser):
-        html = "<a href=\"/page/Item:Sword_of_Shadow\">Sword of Shadow</a>"
+        html = '<a href="/page/Item:Sword_of_Shadow">Sword of Shadow</a>'
         links = parser.parse(html, "Update_5_named_items")
         assert links[0].item_name == "Sword of Shadow"
 
     def test_custom_base_url(self):
         custom = UpdatePageParser(base_url="https://staging.ddowiki.com")
-        html = "<a href=\"/page/Item:Test_Item\">Test Item</a>"
+        html = '<a href="/page/Item:Test_Item">Test Item</a>'
         links = custom.parse(html, "Update_1")
         assert links[0].wiki_url.startswith("https://staging.ddowiki.com")
 
     def test_base_url_trailing_slash_stripped(self):
         parser = UpdatePageParser(base_url="https://ddowiki.com/")
-        html = "<a href=\"/page/Item:Foo\">Foo</a>"
+        html = '<a href="/page/Item:Foo">Foo</a>'
         links = parser.parse(html, "Update_1")
         assert "//page" not in links[0].wiki_url

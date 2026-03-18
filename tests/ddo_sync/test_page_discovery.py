@@ -38,13 +38,15 @@ def discoverer() -> UpdatePageDiscoverer:
 class TestDiscover:
     def test_returns_matching_pages(self, discoverer):
         # MediaWiki returns titles with spaces; discoverer normalises to underscores
-        data = _api_response([
-            "Update 10 named items",
-            "Update 11 named items",
-            "Update 12 named items",
-            "Update 10 release notes",    # should be excluded
-            "Update 11 economy changes",  # should be excluded
-        ])
+        data = _api_response(
+            [
+                "Update 10 named items",
+                "Update 11 named items",
+                "Update 12 named items",
+                "Update 10 release notes",  # should be excluded
+                "Update 11 economy changes",  # should be excluded
+            ]
+        )
         with patch("requests.get", return_value=_mock_get(data)):
             pages = discoverer.discover()
         assert pages == [
@@ -54,11 +56,13 @@ class TestDiscover:
         ]
 
     def test_sorted_numerically(self, discoverer):
-        data = _api_response([
-            "Update 20 named items",
-            "Update 5 named items",
-            "Update 100 named items",
-        ])
+        data = _api_response(
+            [
+                "Update 20 named items",
+                "Update 5 named items",
+                "Update 100 named items",
+            ]
+        )
         with patch("requests.get", return_value=_mock_get(data)):
             pages = discoverer.discover()
         assert pages == [
@@ -109,7 +113,7 @@ class TestDiscover:
         page2 = _api_response(["Update 7 named items", "Update 8 named items"])
 
         responses = iter([_mock_get(page1), _mock_get(page2)])
-        with patch("requests.get", side_effect=lambda *a, **kw: next(responses)):
+        with patch("requests.get", side_effect=lambda *_a, **_kw: next(responses)):
             pages = discoverer.discover()
 
         assert pages == [

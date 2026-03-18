@@ -37,19 +37,21 @@ class ItemFilter:
     """
 
     # Core identity
-    name_contains: Optional[str] = None          # case-insensitive LIKE '%x%'
-    item_type: Optional[str] = None              # exact: 'Cloak', 'Weapon'
-    slot: Optional[str] = None                   # exact: 'Back', 'Finger'
+    name_contains: Optional[str] = None  # case-insensitive LIKE '%x%'
+    item_type: Optional[str] = None  # exact: 'Cloak', 'Weapon'
+    slot: Optional[str] = None  # exact: 'Back', 'Finger'
 
     # Level gating
-    minimum_level_min: Optional[int] = None      # minimum_level >= x
-    minimum_level_max: Optional[int] = None      # minimum_level <= x (equippable at level x)
+    minimum_level_min: Optional[int] = None  # minimum_level >= x
+    minimum_level_max: Optional[int] = (
+        None  # minimum_level <= x (equippable at level x)
+    )
 
     # Character restrictions
     required_race: Optional[str] = None
     required_class: Optional[str] = None
-    exclude_race_restricted: bool = False        # WHERE required_race IS NULL
-    exclude_class_restricted: bool = False       # WHERE required_class IS NULL
+    exclude_race_restricted: bool = False  # WHERE required_race IS NULL
+    exclude_class_restricted: bool = False  # WHERE required_class IS NULL
 
     # Binding / material
     binding: Optional[str] = None
@@ -65,14 +67,14 @@ class ItemFilter:
     arcane_spell_failure_max: Optional[int] = None
 
     # Enchantment filter (joins enchantments)
-    has_enchantment: Optional[str] = None       # case-insensitive LIKE match on name
+    has_enchantment: Optional[str] = None  # case-insensitive LIKE match on name
 
     # Set membership (joins item_named_set → named_sets)
-    named_set: Optional[str] = None             # exact set name
+    named_set: Optional[str] = None  # exact set name
 
     # Source filters
-    drops_in_quest: Optional[str] = None        # LIKE substring match on quest_name
-    dropped_by: Optional[str] = None            # LIKE substring match on monster
+    drops_in_quest: Optional[str] = None  # LIKE substring match on quest_name
+    dropped_by: Optional[str] = None  # LIKE substring match on monster
 
     # Data freshness
     scraped_before: Optional[datetime] = None

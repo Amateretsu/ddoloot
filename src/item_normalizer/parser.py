@@ -22,7 +22,6 @@ from loguru import logger
 
 from item_normalizer.exceptions import ParseError
 
-
 # Maps lowercased, colon-stripped infobox <th> text to canonical field names.
 # Multiple wiki phrasings can map to the same canonical name.
 FIELD_ALIASES: dict[str, str] = {
@@ -68,10 +67,25 @@ FIELD_ALIASES: dict[str, str] = {
 LIST_FIELDS: frozenset[str] = frozenset({"damage_type"})
 
 # Roman numerals used as enchantment tier indicators in DDO.
-ROMAN_NUMERALS: frozenset[str] = frozenset({
-    "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
-    "XI", "XII", "XIII", "XIV", "XV",
-})
+ROMAN_NUMERALS: frozenset[str] = frozenset(
+    {
+        "I",
+        "II",
+        "III",
+        "IV",
+        "V",
+        "VI",
+        "VII",
+        "VIII",
+        "IX",
+        "X",
+        "XI",
+        "XII",
+        "XIII",
+        "XIV",
+        "XV",
+    }
+)
 
 # Type alias for the intermediate parsed dict returned by WikiPageParser.
 ParsedFields = dict[str, Any]
@@ -271,7 +285,9 @@ class WikiPageParser:
                 raw_value = td.get_text(separator=" ", strip=True)
 
                 if canonical in LIST_FIELDS:
-                    fields[canonical] = [v.strip() for v in raw_value.split(",") if v.strip()]
+                    fields[canonical] = [
+                        v.strip() for v in raw_value.split(",") if v.strip()
+                    ]
                 else:
                     fields[canonical] = raw_value
 

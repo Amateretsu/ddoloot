@@ -103,7 +103,10 @@ class _ItemWriter:
     def _insert_enchantments(self, item_id: int, item: DDOItem) -> None:
         self._conn.executemany(
             "INSERT INTO enchantments (item_id, position, name, value) VALUES (?, ?, ?, ?)",
-            [(item_id, pos, enc.name, enc.value) for pos, enc in enumerate(item.enchantments)],
+            [
+                (item_id, pos, enc.name, enc.value)
+                for pos, enc in enumerate(item.enchantments)
+            ],
         )
 
     def _insert_weapon_stats(self, item_id: int, item: DDOItem) -> None:

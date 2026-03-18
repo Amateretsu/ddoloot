@@ -12,7 +12,7 @@ Main Components:
 
 Example:
     >>> from ddowiki_scraper import WikiFetcher, WikiFetcherConfig
-    >>> 
+    >>>
     >>> config = WikiFetcherConfig(rate_limit_delay=3.0)
     >>> with WikiFetcher(config) as fetcher:
     ...     html = fetcher.fetch_item_page("Mantle of the Worldshaper")
@@ -23,10 +23,10 @@ For detailed documentation, see individual module docstrings.
 
 from ddowiki_scraper.config import WikiFetcherConfig
 from ddowiki_scraper.exceptions import (
-    WikiFetcherError,
     FetchError,
     RateLimitError,
     RobotsTxtError,
+    WikiFetcherError,
 )
 from ddowiki_scraper.fetcher import WikiFetcher
 from ddowiki_scraper.rate_limiter import RateLimiter
@@ -34,15 +34,12 @@ from ddowiki_scraper.rate_limiter import RateLimiter
 __version__ = "0.1.0"
 __author__ = "Portfolio Project"
 __all__ = [
-    # Main classes
-    "WikiFetcher",
-    "WikiFetcherConfig",
-    "RateLimiter",
-    # Exceptions
-    "WikiFetcherError",
     "FetchError",
     "RateLimitError",
+    "RateLimiter",
     "RobotsTxtError",
-    # Metadata
+    "WikiFetcher",
+    "WikiFetcherConfig",
+    "WikiFetcherError",
     "__version__",
 ]

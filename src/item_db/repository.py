@@ -16,8 +16,6 @@ from typing import List, Optional, Tuple
 
 from loguru import logger
 
-from item_normalizer.models import DDOItem
-
 from item_db._filters import ItemFilter, build_where_clause
 from item_db._reader import _ItemReader
 from item_db._writer import _ItemWriter
@@ -28,6 +26,7 @@ from item_db.exceptions import (
     SchemaError,
 )
 from item_db.schema import SCHEMA_SQL
+from item_normalizer.models import DDOItem
 
 
 class ItemRepository:
@@ -307,9 +306,11 @@ class ItemRepository:
             Integer ID or None.
         """
         try:
-            row = self._get_conn().execute(
-                "SELECT id FROM items WHERE name = ?", (name,)
-            ).fetchone()
+            row = (
+                self._get_conn()
+                .execute("SELECT id FROM items WHERE name = ?", (name,))
+                .fetchone()
+            )
             return row["id"] if row else None
         except sqlite3.Error as exc:
             raise ItemDbError(f"Database error getting id for {name!r}: {exc}") from exc
@@ -317,9 +318,11 @@ class ItemRepository:
     def list_names(self) -> List[str]:
         """Return a sorted list of all item names in the database."""
         try:
-            rows = self._get_conn().execute(
-                "SELECT name FROM items ORDER BY name"
-            ).fetchall()
+            rows = (
+                self._get_conn()
+                .execute("SELECT name FROM items ORDER BY name")
+                .fetchall()
+            )
             return [r["name"] for r in rows]
         except sqlite3.Error as exc:
             raise ItemDbError(f"Database error listing names: {exc}") from exc
@@ -335,12 +338,16 @@ class ItemRepository:
     def exists(self, name: str) -> bool:
         """Return True if an item with this name exists."""
         try:
-            row = self._get_conn().execute(
-                "SELECT 1 FROM items WHERE name = ?", (name,)
-            ).fetchone()
+            row = (
+                self._get_conn()
+                .execute("SELECT 1 FROM items WHERE name = ?", (name,))
+                .fetchone()
+            )
             return row is not None
         except sqlite3.Error as exc:
-            raise ItemDbError(f"Database error checking existence of {name!r}: {exc}") from exc
+            raise ItemDbError(
+                f"Database error checking existence of {name!r}: {exc}"
+            ) from exc
 
     def search(self, filters: ItemFilter) -> List[DDOItem]:
         """Return items matching all provided filter criteria, sorted by name.
@@ -356,9 +363,7 @@ class ItemRepository:
             rows = self._get_conn().execute(sql, params).fetchall()
             reader = _ItemReader(self._get_conn())
             return [
-                item
-                for r in rows
-                if (item := reader.read_by_id(r["id"])) is not None
+                item for r in rows if (item := reader.read_by_id(r["id"])) is not None
             ]
         except sqlite3.Error as exc:
             raise ItemDbError(f"Database error during search: {exc}") from exc
@@ -366,15 +371,19 @@ class ItemRepository:
     def find_by_enchantment(self, enchantment_name: str) -> List[str]:
         """Return names of items that have a matching enchantment (substring match)."""
         try:
-            rows = self._get_conn().execute(
-                """
+            rows = (
+                self._get_conn()
+                .execute(
+                    """
                 SELECT DISTINCT i.name FROM items i
                 JOIN enchantments e ON e.item_id = i.id
                 WHERE e.name LIKE ?
                 ORDER BY i.name
                 """,
-                (f"%{enchantment_name}%",),
-            ).fetchall()
+                    (f"%{enchantment_name}%",),
+                )
+                .fetchall()
+            )
             return [r["name"] for r in rows]
         except sqlite3.Error as exc:
             raise ItemDbError(f"Database error searching enchantments: {exc}") from exc
@@ -382,37 +391,45 @@ class ItemRepository:
     def find_by_set(self, set_name: str) -> List[DDOItem]:
         """Return all items that belong to the named set, sorted by name."""
         try:
-            rows = self._get_conn().execute(
-                """
+            rows = (
+                self._get_conn()
+                .execute(
+                    """
                 SELECT i.id FROM items i
                 JOIN item_named_set ins ON ins.item_id = i.id
                 JOIN named_sets ns ON ns.id = ins.named_set_id
                 WHERE ns.name = ?
                 ORDER BY i.name
                 """,
-                (set_name,),
-            ).fetchall()
+                    (set_name,),
+                )
+                .fetchall()
+            )
             reader = _ItemReader(self._get_conn())
             return [
-                item
-                for r in rows
-                if (item := reader.read_by_id(r["id"])) is not None
+                item for r in rows if (item := reader.read_by_id(r["id"])) is not None
             ]
         except sqlite3.Error as exc:
-            raise ItemDbError(f"Database error searching set {set_name!r}: {exc}") from exc
+            raise ItemDbError(
+                f"Database error searching set {set_name!r}: {exc}"
+            ) from exc
 
     def find_by_quest(self, quest_name: str) -> List[str]:
         """Return names of items that drop in the given quest (substring match)."""
         try:
-            rows = self._get_conn().execute(
-                """
+            rows = (
+                self._get_conn()
+                .execute(
+                    """
                 SELECT DISTINCT i.name FROM items i
                 JOIN source_quests sq ON sq.item_id = i.id
                 WHERE sq.quest_name LIKE ?
                 ORDER BY i.name
                 """,
-                (f"%{quest_name}%",),
-            ).fetchall()
+                    (f"%{quest_name}%",),
+                )
+                .fetchall()
+            )
             return [r["name"] for r in rows]
         except sqlite3.Error as exc:
             raise ItemDbError(f"Database error searching quests: {exc}") from exc
@@ -420,14 +437,18 @@ class ItemRepository:
     def get_scraped_at(self, name: str) -> Optional[datetime]:
         """Return the scraped_at timestamp for an item without loading the full object."""
         try:
-            row = self._get_conn().execute(
-                "SELECT scraped_at FROM items WHERE name = ?", (name,)
-            ).fetchone()
+            row = (
+                self._get_conn()
+                .execute("SELECT scraped_at FROM items WHERE name = ?", (name,))
+                .fetchone()
+            )
             if row is None:
                 return None
             return datetime.fromisoformat(row["scraped_at"])
         except sqlite3.Error as exc:
-            raise ItemDbError(f"Database error reading scraped_at for {name!r}: {exc}") from exc
+            raise ItemDbError(
+                f"Database error reading scraped_at for {name!r}: {exc}"
+            ) from exc
 
     # ── Internal helpers ─────────────────────────────────────────────────────
 

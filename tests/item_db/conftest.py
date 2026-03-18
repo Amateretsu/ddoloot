@@ -54,7 +54,11 @@ def cloak_item() -> DDOItem:
         ],
         named_set=NamedSet(
             name="Thelanis Fairy Tale",
-            bonuses=[SetBonus(pieces_required=2, description="+1 artifact bonus to all saves")],
+            bonuses=[
+                SetBonus(
+                    pieces_required=2, description="+1 artifact bonus to all saves"
+                )
+            ],
         ),
         source=ItemSource(
             quests=["The Snitch", "The Spinner of Shadows"],

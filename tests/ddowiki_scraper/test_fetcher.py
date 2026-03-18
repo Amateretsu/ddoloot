@@ -6,16 +6,16 @@ error handling, robots.txt compliance, and session management using mocked respo
 
 import time
 from typing import Any
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
 import aiohttp
+import pytest
 import requests
 
 from ddowiki_scraper.config import WikiFetcherConfig
 from ddowiki_scraper.exceptions import (
-    RobotsTxtError,
     FetchError,
+    RobotsTxtError,
 )
 from ddowiki_scraper.fetcher import WikiFetcher
 
@@ -91,7 +91,7 @@ class TestWikiFetcher:
 
     @patch("ddowiki_scraper.fetcher.RobotFileParser")
     def test_robots_txt_check_enabled(
-        self, mock_parser_class: Mock, default_config: WikiFetcherConfig
+        self, mock_parser_class: Mock, default_config: WikiFetcherConfig  # noqa: ARG002
     ) -> None:
         """Test that robots.txt is checked when enabled."""
         config = WikiFetcherConfig(
@@ -101,7 +101,7 @@ class TestWikiFetcher:
         mock_parser = Mock()
         mock_parser_class.return_value = mock_parser
 
-        fetcher = WikiFetcher(config)
+        WikiFetcher(config)
 
         mock_parser.set_url.assert_called_once()
         mock_parser.read.assert_called_once()
@@ -122,17 +122,13 @@ class TestWikiFetcher:
         url = fetcher._build_item_url("Staff of the Seer's Vision")
         assert "Staff_of_the_Seer%27s_Vision" in url
 
-    def test_can_fetch_without_robots(
-        self, default_config: WikiFetcherConfig
-    ) -> None:
+    def test_can_fetch_without_robots(self, default_config: WikiFetcherConfig) -> None:
         """Test that _can_fetch returns True when robots.txt is disabled."""
         fetcher = WikiFetcher(default_config)
         assert fetcher._can_fetch("https://ddowiki.com/page/Item:Test") is True
 
     @patch("ddowiki_scraper.fetcher.RobotFileParser")
-    def test_can_fetch_disallowed_by_robots(
-        self, mock_parser_class: Mock
-    ) -> None:
+    def test_can_fetch_disallowed_by_robots(self, mock_parser_class: Mock) -> None:
         """Test that RobotsTxtError is raised when URL is disallowed."""
         config = WikiFetcherConfig(
             base_url="https://ddowiki.com", respect_robots_txt=True
@@ -218,9 +214,7 @@ class TestWikiFetcherSync:
 
         assert html == sample_html
 
-    def test_fetch_url_wrong_domain(
-        self, default_config: WikiFetcherConfig
-    ) -> None:
+    def test_fetch_url_wrong_domain(self, default_config: WikiFetcherConfig) -> None:
         """Test that ValueError is raised for URLs from wrong domain."""
         fetcher = WikiFetcher(default_config)
 
@@ -343,7 +337,7 @@ class TestWikiFetcherAsync:
         """Test batch fetch with some failures."""
         call_count = 0
 
-        async def side_effect(*args: Any, **kwargs: Any) -> AsyncMock:
+        async def side_effect(*_args: Any, **_kwargs: Any) -> AsyncMock:
             nonlocal call_count
             call_count += 1
 
@@ -447,8 +441,11 @@ class TestWikiFetcherRetries:
     @patch("time.sleep")  # Prevent exponential backoff delays during test
     @patch("ddowiki_scraper.fetcher.requests.Session.get")
     def test_retry_on_transient_error(
-        self, mock_get: Mock, _mock_sleep: Mock,
-        default_config: WikiFetcherConfig, sample_html: str
+        self,
+        mock_get: Mock,
+        _mock_sleep: Mock,  # noqa: PT019
+        default_config: WikiFetcherConfig,
+        sample_html: str,
     ) -> None:
         """Test that transient errors trigger retries."""
         # First two calls fail, third succeeds
@@ -467,7 +464,10 @@ class TestWikiFetcherRetries:
     @patch("time.sleep")  # Prevent exponential backoff delays during test
     @patch("ddowiki_scraper.fetcher.requests.Session.get")
     def test_max_retries_exceeded(
-        self, mock_get: Mock, _mock_sleep: Mock, default_config: WikiFetcherConfig
+        self,
+        mock_get: Mock,
+        _mock_sleep: Mock,  # noqa: PT019
+        default_config: WikiFetcherConfig,
     ) -> None:
         """Test that FetchError is raised after max retries."""
         mock_get.side_effect = requests.ConnectionError("Connection failed")

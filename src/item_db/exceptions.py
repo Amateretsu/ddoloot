@@ -8,7 +8,6 @@ Exception hierarchy:
 """
 
 
-
 class ItemDbError(Exception):
     """Base exception for all item_db errors."""
 
@@ -45,7 +44,5 @@ class DuplicateItemError(ItemDbError):
     """
 
     def __init__(self, name: str) -> None:
-        super().__init__(
-            f"Item already exists: {name!r}. Use upsert() to overwrite."
-        )
+        super().__init__(f"Item already exists: {name!r}. Use upsert() to overwrite.")
         self.name = name

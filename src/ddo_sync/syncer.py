@@ -21,15 +21,14 @@ from typing import List, Optional, Tuple
 
 from loguru import logger
 
-from ddowiki_scraper.fetcher import WikiFetcher
-from item_db.repository import ItemRepository
-from item_normalizer.normalizer import ItemNormalizer
-
 from ddo_sync.exceptions import UpdatePageError
 from ddo_sync.models import ItemLink, SyncStatus
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.update_page_parser import UpdatePageParser
 from ddo_sync.wiki_api import WikiApiClient
+from ddowiki_scraper.fetcher import WikiFetcher
+from item_db.repository import ItemRepository
+from item_normalizer.normalizer import ItemNormalizer
 
 _BASE_URL = "https://ddowiki.com"
 _PAGE_PREFIX = f"{_BASE_URL}/page/"
