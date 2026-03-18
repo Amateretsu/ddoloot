@@ -1,5 +1,6 @@
 # Exclude our Data files from Git Source Control
 **data
+.claude
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
