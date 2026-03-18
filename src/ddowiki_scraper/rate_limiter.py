@@ -22,6 +22,7 @@ Example:
 
 import asyncio
 import time
+
 from loguru import logger
 
 from ddowiki_scraper.exceptions import RateLimitError

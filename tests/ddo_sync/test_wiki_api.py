@@ -10,7 +10,6 @@ import requests
 
 from ddo_sync.exceptions import WikiApiError
 from ddo_sync.wiki_api import WikiApiClient
-
 from tests.ddo_sync.conftest import make_mediawiki_response, make_missing_page_response
 
 UTC = timezone.utc

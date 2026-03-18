@@ -6,6 +6,7 @@ thread safety, and utility methods.
 
 import asyncio
 import time
+
 import pytest
 
 from ddowiki_scraper.rate_limiter import RateLimiter

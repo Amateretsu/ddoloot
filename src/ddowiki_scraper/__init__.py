@@ -23,10 +23,10 @@ For detailed documentation, see individual module docstrings.
 
 from ddowiki_scraper.config import WikiFetcherConfig
 from ddowiki_scraper.exceptions import (
-    WikiFetcherError,
     FetchError,
     RateLimitError,
     RobotsTxtError,
+    WikiFetcherError,
 )
 from ddowiki_scraper.fetcher import WikiFetcher
 from ddowiki_scraper.rate_limiter import RateLimiter

@@ -11,7 +11,6 @@ from ddo_sync.exceptions import UpdatePageError
 from ddo_sync.models import ItemLink, SyncStatus
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.syncer import DDOSyncer
-
 from tests.ddo_sync.conftest import (
     MODIFIED_AFTER,
     MODIFIED_BEFORE,

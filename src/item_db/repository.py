@@ -16,8 +16,6 @@ from typing import List, Optional, Tuple
 
 from loguru import logger
 
-from item_normalizer.models import DDOItem
-
 from item_db._filters import ItemFilter, build_where_clause
 from item_db._reader import _ItemReader
 from item_db._writer import _ItemWriter
@@ -28,6 +26,7 @@ from item_db.exceptions import (
     SchemaError,
 )
 from item_db.schema import SCHEMA_SQL
+from item_normalizer.models import DDOItem
 
 
 class ItemRepository:

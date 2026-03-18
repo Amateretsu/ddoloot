@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from datetime import timezone
 
-
 from ddo_sync.models import ItemLink, QueueItem, QueueStats, UpdatePageStatus
 from ddo_sync.queue_db import QueueRepository
-
 from tests.ddo_sync.conftest import (
     MODIFIED_AFTER,
     MODIFIED_BEFORE,

@@ -5,7 +5,7 @@ from datetime import timezone
 import pytest
 
 from item_normalizer.exceptions import ParseError
-from item_normalizer.models import DDOItem, WeaponStats, ArmorStats
+from item_normalizer.models import ArmorStats, DDOItem, WeaponStats
 from item_normalizer.normalizer import ItemNormalizer
 
 WIKI_URL = "https://ddowiki.com/page/Item:Test"

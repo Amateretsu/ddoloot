@@ -6,16 +6,16 @@ error handling, robots.txt compliance, and session management using mocked respo
 
 import time
 from typing import Any
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
 import aiohttp
+import pytest
 import requests
 
 from ddowiki_scraper.config import WikiFetcherConfig
 from ddowiki_scraper.exceptions import (
-    RobotsTxtError,
     FetchError,
+    RobotsTxtError,
 )
 from ddowiki_scraper.fetcher import WikiFetcher
 

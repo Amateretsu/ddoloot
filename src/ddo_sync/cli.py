@@ -31,16 +31,15 @@ from typing import List, Optional
 
 from loguru import logger
 
-from ddowiki_scraper import WikiFetcher, WikiFetcherConfig
-from ddowiki_scraper.exceptions import FetchError, RobotsTxtError
-from item_db import ItemRepository
-from item_normalizer import ItemNormalizer
-
 from ddo_sync.exceptions import UpdatePageError
 from ddo_sync.models import SyncStatus
 from ddo_sync.page_discovery import UpdatePageDiscoverer
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.syncer import DDOSyncer
+from ddowiki_scraper import WikiFetcher, WikiFetcherConfig
+from ddowiki_scraper.exceptions import FetchError, RobotsTxtError
+from item_db import ItemRepository
+from item_normalizer import ItemNormalizer
 
 # ── Default database paths ────────────────────────────────────────────────────
 _ROOT = Path(__file__).resolve().parent.parent.parent  # …/src/ddo_sync → root

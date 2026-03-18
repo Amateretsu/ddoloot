@@ -25,7 +25,7 @@ Example:
 """
 
 import asyncio
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote, urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -34,9 +34,9 @@ import requests
 from loguru import logger
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
 
 from ddowiki_scraper.config import WikiFetcherConfig

@@ -7,7 +7,6 @@ import pytest
 from ddo_sync.exceptions import UpdatePageError
 from ddo_sync.models import ItemLink
 from ddo_sync.update_page_parser import UpdatePageParser
-
 from tests.ddo_sync.conftest import EMPTY_PAGE_HTML, UPDATE_PAGE_HTML
 
 
