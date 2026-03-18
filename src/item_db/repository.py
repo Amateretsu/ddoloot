@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple
 
 from loguru import logger
 
-from item_db._filters import ItemFilter, build_where_clause
+from item_db._filters import ItemFilter, _build_where_clause
 from item_db._reader import _ItemReader
 from item_db._writer import _ItemWriter
 from item_db.exceptions import (
@@ -212,22 +212,28 @@ class ItemRepository:
         except sqlite3.Error as exc:
             raise ItemDbError(f"Database error deleting id={item_id}: {exc}") from exc
 
-    def save_many(self, items: List[DDOItem]) -> Tuple[int, int]:
+    def save_many(
+        self, items: List[DDOItem]
+    ) -> Tuple[int, List[Tuple[DDOItem, Exception]]]:
         """Bulk upsert a list of DDOItem objects.
 
-        Calls upsert() per item and collects errors without aborting the batch.
+        Calls upsert() per item and collects failures without aborting the batch.
 
         Args:
             items: List of DDOItem objects to persist.
 
         Returns:
-            Tuple of (success_count, error_count).
+            Tuple of ``(success_count, failures)`` where *failures* is a list
+            of ``(item, exception)`` pairs for every item that could not be
+            persisted.  Callers can inspect or re-raise individual errors.
 
         Example:
-            >>> saved, errors = repo.save_many(scraped_items)
+            >>> saved, failures = repo.save_many(scraped_items)
+            >>> for item, exc in failures:
+            ...     logger.error(f"Failed to save {item.name!r}: {exc}")
         """
         success = 0
-        errors = 0
+        failures: List[Tuple[DDOItem, Exception]] = []
         for item in items:
             try:
                 self.upsert(item)
@@ -235,9 +241,9 @@ class ItemRepository:
             except Exception as exc:
                 name = getattr(item, "name", repr(item))
                 logger.warning(f"save_many: failed to upsert {name!r}: {exc}")
-                errors += 1
-        logger.info(f"save_many complete: {success} saved, {errors} errors")
-        return success, errors
+                failures.append((item, exc))
+        logger.info(f"save_many complete: {success} saved, {len(failures)} errors")
+        return success, failures
 
     # ── Reads ────────────────────────────────────────────────────────────────
 
@@ -359,7 +365,7 @@ class ItemRepository:
             List of matching DDOItem objects.
         """
         try:
-            sql, params = build_where_clause(filters)
+            sql, params = _build_where_clause(filters)
             rows = self._get_conn().execute(sql, params).fetchall()
             reader = _ItemReader(self._get_conn())
             return [

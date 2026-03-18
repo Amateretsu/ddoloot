@@ -31,13 +31,13 @@ from typing import List, Optional
 
 from loguru import logger
 
+from ddo_sync.debug_commands import normalize_item
 from ddo_sync.exceptions import UpdatePageError
 from ddo_sync.models import SyncStatus
 from ddo_sync.page_discovery import UpdatePageDiscoverer
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.syncer import DDOSyncer
 from ddowiki_scraper import WikiFetcher, WikiFetcherConfig
-from ddowiki_scraper.exceptions import FetchError, RobotsTxtError
 from item_db import ItemRepository
 from item_normalizer import ItemNormalizer
 
@@ -46,8 +46,6 @@ _ROOT = Path(__file__).resolve().parent.parent.parent  # …/src/ddo_sync → ro
 DATA_DIR = _ROOT / "data"
 LOOT_DB = DATA_DIR / "loot.db"
 QUEUE_DB = DATA_DIR / "queue.db"
-
-WIKI_URL_BASE = "https://ddowiki.com/page/Item:"
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
@@ -113,6 +111,14 @@ def _build_parser() -> argparse.ArgumentParser:
         "--item-override",
         action="store_true",
         help="Overwrite existing data in the db file during an item sync.",
+    )
+    p.add_argument(
+        "--max-retries",
+        type=int,
+        default=3,
+        metavar="N",
+        dest="max_retries",
+        help="Maximum retry attempts before an item is permanently failed (default: 3).",
     )
     p.add_argument(
         "--verbose",
@@ -200,6 +206,7 @@ def _cmd_sync(
     page_names: Optional[List[str]],
     limit: Optional[int],
     rate_limit: float,
+    max_retries: int = 3,
 ) -> int:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -239,7 +246,7 @@ def _cmd_sync(
                 normalizer=ItemNormalizer(),
                 item_repo=item_repo,
                 queue_repo=queue_repo,
-                max_retries=3,
+                max_retries=max_retries,
             )
 
             for name in pages:
@@ -306,59 +313,6 @@ def _install_sigint_handler() -> None:
     signal.signal(signal.SIGINT, _handler)
 
 
-def _normalize_item(item: str, upsert: bool) -> None:
-    """Normalize an item and inspect typed fields."""
-
-    logger.debug(f"Normalizing {item}")
-
-    config = WikiFetcherConfig(
-        rate_limit_delay=2.5,
-        respect_robots_txt=True,
-    )
-
-    with WikiFetcher(config) as fetcher:
-        try:
-            html = fetcher.fetch_item_page(item)
-            print(f"Fetched {len(html):,} bytes")  # noqa: T201
-            print(f"Page title found: {item in html}")  # noqa: T201
-        except RobotsTxtError as e:
-            print(f"Blocked by robots.txt: {e}")  # noqa: T201
-        except FetchError as e:
-            print(f"Fetch failed (HTTP {e.status_code}): {e}")  # noqa: T201
-
-        normalizer = ItemNormalizer()
-        item = normalizer.normalize(html, wiki_url=f"{WIKI_URL_BASE}{item}")
-
-        logger.debug(f"Name          : {item.name}")
-        logger.debug(f"Slot          : {item.slot}")
-        logger.debug(f"Minimum level : {item.minimum_level}  (int, not string)")
-        logger.debug(f"Binding       : {item.binding}")
-        logger.debug(f"Material      : {item.material}")
-        logger.debug(f"Hardness      : {item.hardness}")
-        logger.debug(f"Durability    : {item.durability}")
-        logger.debug(f"Weight        : {item.weight} lbs")
-        logger.debug(f"Flavor text   : {item.flavor_text!r}")
-
-        print(f"\nEnchantments ({len(item.enchantments)}):")  # noqa: T201
-        for enc in item.enchantments:
-            value_str = f" {enc.value}" if enc.value else ""
-            print(f"  - {enc.name}{value_str}")  # noqa: T201
-
-        if item.named_set:
-            print(f"\nNamed set: {item.named_set.name}")  # noqa: T201
-
-        if item.source:
-            print(f"Source quests: {item.source.quests}")  # noqa: T201
-
-        with ItemRepository(str(LOOT_DB)) as item_repo:
-            if upsert:
-                item_repo.upsert(item)
-                logger.info(f"Upserted item: {item}")
-            else:
-                item_repo.save(item)
-                logger.info(f"Saved item: {item}")
-
-
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 
@@ -373,10 +327,12 @@ def main() -> int:
     if args.reset_failed:
         return _cmd_reset_failed()
     if args.item:
-        return _normalize_item(args.item, args.item_override)
+        normalize_item(args.item, upsert=args.item_override, loot_db=LOOT_DB)
+        return 0
 
     return _cmd_sync(
         page_names=args.pages,
         limit=args.limit,
         rate_limit=args.rate_limit,
+        max_retries=args.max_retries,
     )

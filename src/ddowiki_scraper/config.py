@@ -93,6 +93,13 @@ class WikiFetcherConfig(BaseModel):
         default=True,
         description="Check robots.txt before scraping",
     )
+    robots_txt_fail_open: bool = Field(
+        default=True,
+        description=(
+            "When True (default), allow scraping if robots.txt cannot be fetched. "
+            "When False, block all requests if robots.txt is unavailable."
+        ),
+    )
 
     @field_validator("base_url")
     @classmethod

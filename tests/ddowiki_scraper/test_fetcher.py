@@ -93,15 +93,19 @@ class TestWikiFetcher:
     def test_robots_txt_check_enabled(
         self, mock_parser_class: Mock, default_config: WikiFetcherConfig  # noqa: ARG002
     ) -> None:
-        """Test that robots.txt is checked when enabled."""
+        """Test that robots.txt is loaded lazily on the first _can_fetch call."""
         config = WikiFetcherConfig(
             base_url="https://ddowiki.com", respect_robots_txt=True
         )
 
         mock_parser = Mock()
+        mock_parser.can_fetch.return_value = True
         mock_parser_class.return_value = mock_parser
 
-        WikiFetcher(config)
+        fetcher = WikiFetcher(config)
+        # robots.txt not yet loaded — triggered on first _can_fetch call
+        assert not fetcher._robots_loaded
+        fetcher._can_fetch("https://ddowiki.com/page/Item:Test")
 
         mock_parser.set_url.assert_called_once()
         mock_parser.read.assert_called_once()

@@ -130,9 +130,9 @@ class TestSaveMany:
     def test_save_many_all_success(
         self, repo: ItemRepository, cloak_item: DDOItem, weapon_item: DDOItem
     ) -> None:
-        saved, errors = repo.save_many([cloak_item, weapon_item])
+        saved, failures = repo.save_many([cloak_item, weapon_item])
         assert saved == 2
-        assert errors == 0
+        assert failures == []
         assert repo.count() == 2
 
     def test_save_many_partial_failure(
@@ -140,8 +140,10 @@ class TestSaveMany:
     ) -> None:
         repo.save(cloak_item)
         # Second save of same item upserts (succeeds), so use save_many with non-DDOItem
-        _saved, errors = repo.save_many([cloak_item, "bad"])  # type: ignore[list-item]
-        assert errors == 1
+        _saved, failures = repo.save_many([cloak_item, "bad"])  # type: ignore[list-item]
+        assert len(failures) == 1
+        assert failures[0][0] == "bad"
+        assert isinstance(failures[0][1], TypeError)
 
 
 # ── Get ──────────────────────────────────────────────────────────────────────

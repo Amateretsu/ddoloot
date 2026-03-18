@@ -100,23 +100,32 @@ class UpdatePageStatus:
         page_url:         Full URL of the update page.
         last_synced_at:   When we last fetched + parsed item links, or None.
         wiki_modified_at: MediaWiki API timestamp of the last wiki edit, or None.
-        needs_resync:     True when wiki is newer than our last sync, or either timestamp is None.
+
+    The ``needs_resync`` property is computed purely from the two timestamps —
+    no external logic needed, and the derivation is transparent to readers.
 
     Example:
-        >>> UpdatePageStatus(
+        >>> status = UpdatePageStatus(
         ...     page_name="Update_5_named_items",
         ...     page_url="https://ddowiki.com/page/Update_5_named_items",
         ...     last_synced_at=None,
         ...     wiki_modified_at=None,
-        ...     needs_resync=True,
         ... )
+        >>> status.needs_resync
+        True
     """
 
     page_name: str
     page_url: str
     last_synced_at: Optional[datetime]
     wiki_modified_at: Optional[datetime]
-    needs_resync: bool
+
+    @property
+    def needs_resync(self) -> bool:
+        """True when the wiki is newer than our last sync, or either timestamp is absent."""
+        if self.last_synced_at is None or self.wiki_modified_at is None:
+            return True
+        return self.wiki_modified_at > self.last_synced_at
 
 
 @dataclasses.dataclass(frozen=True)

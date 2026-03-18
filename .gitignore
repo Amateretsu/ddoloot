@@ -1,6 +1,8 @@
 # Exclude our Data files from Git Source Control
 **data
-.claude
+
+# Exclude vscode specific configs
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

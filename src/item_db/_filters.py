@@ -6,7 +6,7 @@ directly.
 Example:
     >>> from item_db import ItemFilter
     >>> f = ItemFilter(slot="Back", minimum_level_max=20)
-    >>> sql, params = build_where_clause(f)
+    >>> sql, params = _build_where_clause(f)
 """
 
 from dataclasses import dataclass
@@ -81,7 +81,36 @@ class ItemFilter:
     scraped_after: Optional[datetime] = None
 
 
-def build_where_clause(f: ItemFilter) -> Tuple[str, List]:
+# ── Simple column filters (attribute, SQL clause, param transform) ─────────────
+#
+# Each entry is a 3-tuple:
+#   (ItemFilter attribute name, SQL clause with one '?', callable | None)
+# When the attribute is not None the clause is added and the parameter is
+# produced by calling the callable on the value, or by using the value as-is
+# when the callable is None.
+#
+_SIMPLE_FILTERS: List[Tuple[str, str, Optional[object]]] = [
+    ("name_contains", "i.name LIKE ?", lambda v: f"%{v}%"),
+    ("item_type", "i.item_type = ?", None),
+    ("slot", "i.slot = ?", None),
+    ("minimum_level_min", "i.minimum_level >= ?", None),
+    ("minimum_level_max", "(i.minimum_level IS NULL OR i.minimum_level <= ?)", None),
+    ("required_race", "i.required_race = ?", None),
+    ("required_class", "i.required_class = ?", None),
+    ("binding", "i.binding = ?", None),
+    ("material", "i.material = ?", None),
+    ("scraped_before", "i.scraped_at < ?", lambda v: v.isoformat()),
+    ("scraped_after", "i.scraped_at > ?", lambda v: v.isoformat()),
+]
+
+# Boolean flag filters that add a clause with no parameter.
+_FLAG_FILTERS: List[Tuple[str, str]] = [
+    ("exclude_race_restricted", "i.required_race IS NULL"),
+    ("exclude_class_restricted", "i.required_class IS NULL"),
+]
+
+
+def _build_where_clause(f: ItemFilter) -> Tuple[str, List]:
     """Build a parameterized SQL query that returns matching item IDs.
 
     All JOINs reference the integer item_id FK. Only joins required by the
@@ -89,69 +118,29 @@ def build_where_clause(f: ItemFilter) -> Tuple[str, List]:
     joins (enchantments, quests, etc.).
 
     Args:
-        f: Populated ItemFilter instance
+        f: Populated ItemFilter instance.
 
     Returns:
-        Tuple of (sql, params) where sql is a complete SELECT that returns
-        a list of (id, name) rows for matching items, ordered by name.
+        Tuple of ``(sql, params)`` where *sql* is a complete SELECT that
+        returns distinct item IDs ordered by name.
     """
     joins: List[str] = []
     clauses: List[str] = []
     params: List = []
 
-    # ── Items table filters ─────────────────────────────────────────────────
+    # ── Simple column filters ────────────────────────────────────────────────
 
-    if f.name_contains is not None:
-        clauses.append("i.name LIKE ?")
-        params.append(f"%{f.name_contains}%")
+    for attr, clause, transform in _SIMPLE_FILTERS:
+        value = getattr(f, attr)
+        if value is not None:
+            clauses.append(clause)
+            params.append(transform(value) if transform is not None else value)  # type: ignore[operator]
 
-    if f.item_type is not None:
-        clauses.append("i.item_type = ?")
-        params.append(f.item_type)
+    for attr, clause in _FLAG_FILTERS:
+        if getattr(f, attr):
+            clauses.append(clause)
 
-    if f.slot is not None:
-        clauses.append("i.slot = ?")
-        params.append(f.slot)
-
-    if f.minimum_level_min is not None:
-        clauses.append("i.minimum_level >= ?")
-        params.append(f.minimum_level_min)
-
-    if f.minimum_level_max is not None:
-        clauses.append("(i.minimum_level IS NULL OR i.minimum_level <= ?)")
-        params.append(f.minimum_level_max)
-
-    if f.required_race is not None:
-        clauses.append("i.required_race = ?")
-        params.append(f.required_race)
-
-    if f.required_class is not None:
-        clauses.append("i.required_class = ?")
-        params.append(f.required_class)
-
-    if f.exclude_race_restricted:
-        clauses.append("i.required_race IS NULL")
-
-    if f.exclude_class_restricted:
-        clauses.append("i.required_class IS NULL")
-
-    if f.binding is not None:
-        clauses.append("i.binding = ?")
-        params.append(f.binding)
-
-    if f.material is not None:
-        clauses.append("i.material = ?")
-        params.append(f.material)
-
-    if f.scraped_before is not None:
-        clauses.append("i.scraped_at < ?")
-        params.append(f.scraped_before.isoformat())
-
-    if f.scraped_after is not None:
-        clauses.append("i.scraped_at > ?")
-        params.append(f.scraped_after.isoformat())
-
-    # ── Weapon filters ──────────────────────────────────────────────────────
+    # ── Weapon filters ───────────────────────────────────────────────────────
 
     if f.weapon_type is not None or f.handedness is not None:
         joins.append("JOIN weapon_stats ws ON ws.item_id = i.id")
@@ -167,7 +156,7 @@ def build_where_clause(f: ItemFilter) -> Tuple[str, List]:
         clauses.append("wdt.damage_type = ?")
         params.append(f.damage_type_includes)
 
-    # ── Armor filters ───────────────────────────────────────────────────────
+    # ── Armor filters ────────────────────────────────────────────────────────
 
     if f.armor_type is not None or f.arcane_spell_failure_max is not None:
         joins.append("JOIN armor_stats ast ON ast.item_id = i.id")
@@ -180,14 +169,14 @@ def build_where_clause(f: ItemFilter) -> Tuple[str, List]:
             )
             params.append(f.arcane_spell_failure_max)
 
-    # ── Enchantment filter ──────────────────────────────────────────────────
+    # ── Enchantment filter ───────────────────────────────────────────────────
 
     if f.has_enchantment is not None:
         joins.append("JOIN enchantments enc ON enc.item_id = i.id")
         clauses.append("enc.name LIKE ?")
         params.append(f"%{f.has_enchantment}%")
 
-    # ── Named set filter ────────────────────────────────────────────────────
+    # ── Named set filter ─────────────────────────────────────────────────────
 
     if f.named_set is not None:
         joins.append("JOIN item_named_set ins ON ins.item_id = i.id")
@@ -195,7 +184,7 @@ def build_where_clause(f: ItemFilter) -> Tuple[str, List]:
         clauses.append("ns.name = ?")
         params.append(f.named_set)
 
-    # ── Source filters ──────────────────────────────────────────────────────
+    # ── Source filters ────────────────────────────────────────────────────────
 
     if f.drops_in_quest is not None:
         joins.append("JOIN source_quests sq ON sq.item_id = i.id")
@@ -207,10 +196,9 @@ def build_where_clause(f: ItemFilter) -> Tuple[str, List]:
         clauses.append("sdb.monster LIKE ?")
         params.append(f"%{f.dropped_by}%")
 
-    # ── Assemble ────────────────────────────────────────────────────────────
+    # ── Assemble ─────────────────────────────────────────────────────────────
 
     join_sql = (" " + " ".join(joins)) if joins else ""
     where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
-
     sql = f"SELECT DISTINCT i.id FROM items i{join_sql}{where_sql} ORDER BY i.name"
     return sql, params
