@@ -109,7 +109,7 @@ class TestDiscover:
         page2 = _api_response(["Update 7 named items", "Update 8 named items"])
 
         responses = iter([_mock_get(page1), _mock_get(page2)])
-        with patch("requests.get", side_effect=lambda *a, **kw: next(responses)):
+        with patch("requests.get", side_effect=lambda *_a, **_kw: next(responses)):
             pages = discoverer.discover()
 
         assert pages == [

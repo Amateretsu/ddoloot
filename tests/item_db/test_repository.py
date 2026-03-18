@@ -78,9 +78,10 @@ class TestUpsert:
     def test_upsert_replaces_enchantments(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
         repo.upsert(cloak_item)
 
-        fewer_enchants = DDOItem(
-            **{**cloak_item.model_dump(), "enchantments": [Enchantment(name="Resistance", value=5)]}
-        )
+        fewer_enchants = DDOItem(**{
+            **cloak_item.model_dump(),
+            "enchantments": [Enchantment(name="Resistance", value=5)],
+        })
         repo.upsert(fewer_enchants)
 
         restored = repo.get(cloak_item.name)
@@ -128,7 +129,7 @@ class TestSaveMany:
     ) -> None:
         repo.save(cloak_item)
         # Second save of same item upserts (succeeds), so use save_many with non-DDOItem
-        saved, errors = repo.save_many([cloak_item, "bad"])  # type: ignore[list-item]
+        _saved, errors = repo.save_many([cloak_item, "bad"])  # type: ignore[list-item]
         assert errors == 1
 
 

@@ -63,7 +63,9 @@ class TestNormalizeCloak:
         resistance = next(e for e in item.enchantments if e.name == "Resistance")
         assert resistance.value == 5
 
-    def test_devotion_roman_numeral_value(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
+    def test_devotion_roman_numeral_value(
+        self, normalizer: ItemNormalizer, cloak_html: str
+    ) -> None:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         devotion = next(e for e in item.enchantments if e.name == "Superior Devotion")
         assert devotion.value == 6

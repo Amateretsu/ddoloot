@@ -296,7 +296,7 @@ def _print_summary(status: SyncStatus) -> None:
 
 
 def _install_sigint_handler() -> None:
-    def _handler(sig, frame):
+    def _handler(_sig, _frame):
         raise KeyboardInterrupt
     signal.signal(signal.SIGINT, _handler)
 
@@ -314,12 +314,12 @@ def _normalize_item(item: str, upsert: bool) -> None:
     with WikiFetcher(config) as fetcher:
         try:
             html = fetcher.fetch_item_page(item)
-            print(f"Fetched {len(html):,} bytes")
-            print(f"Page title found: {item in html}")
+            print(f"Fetched {len(html):,} bytes")  # noqa: T201
+            print(f"Page title found: {item in html}")  # noqa: T201
         except RobotsTxtError as e:
-            print(f"Blocked by robots.txt: {e}")
+            print(f"Blocked by robots.txt: {e}")  # noqa: T201
         except FetchError as e:
-            print(f"Fetch failed (HTTP {e.status_code}): {e}")
+            print(f"Fetch failed (HTTP {e.status_code}): {e}")  # noqa: T201
 
         normalizer = ItemNormalizer()
         item = normalizer.normalize(html, wiki_url=f"{WIKI_URL_BASE}{item}")
@@ -334,16 +334,16 @@ def _normalize_item(item: str, upsert: bool) -> None:
         logger.debug(f"Weight        : {item.weight} lbs")
         logger.debug(f"Flavor text   : {item.flavor_text!r}")
 
-        print(f"\nEnchantments ({len(item.enchantments)}):")
+        print(f"\nEnchantments ({len(item.enchantments)}):")  # noqa: T201
         for enc in item.enchantments:
             value_str = f" {enc.value}" if enc.value else ""
-            print(f"  - {enc.name}{value_str}")
+            print(f"  - {enc.name}{value_str}")  # noqa: T201
 
         if item.named_set:
-            print(f"\nNamed set: {item.named_set.name}")
+            print(f"\nNamed set: {item.named_set.name}")  # noqa: T201
 
         if item.source:
-            print(f"Source quests: {item.source.quests}")
+            print(f"Source quests: {item.source.quests}")  # noqa: T201
 
         with ItemRepository(str(LOOT_DB)) as item_repo:
             if (upsert):

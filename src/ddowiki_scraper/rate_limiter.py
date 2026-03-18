@@ -10,11 +10,11 @@ safety in concurrent environments.
 Example:
     >>> from ddowiki_scraper.rate_limiter import RateLimiter
     >>> limiter = RateLimiter(delay=2.5)
-    >>> 
+    >>>
     >>> # Synchronous usage
     >>> limiter.wait_sync()
     >>> make_request()
-    >>> 
+    >>>
     >>> # Asynchronous usage
     >>> await limiter.wait_async()
     >>> await make_async_request()
@@ -48,7 +48,7 @@ class RateLimiter:
         >>> limiter = RateLimiter(delay=2.0)
         >>> limiter.wait_sync()  # First call returns immediately
         >>> limiter.wait_sync()  # Second call waits ~2 seconds
-        
+
         >>> # Async usage
         >>> async def fetch_many():
         ...     limiter = RateLimiter(delay=2.0)
@@ -86,7 +86,7 @@ class RateLimiter:
 
         Ensures at least `delay` seconds have passed since the last request.
         If insufficient time has elapsed, sleeps for the remaining duration.
-        
+
         Thread-safe for concurrent async usage via asyncio.Lock. Multiple
         concurrent calls will be serialized, each waiting for their turn plus
         the required delay.

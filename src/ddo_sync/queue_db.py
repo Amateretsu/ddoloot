@@ -6,7 +6,7 @@ lazy open, context manager, explicit transactions, row_factory = sqlite3.Row.
 Example:
     >>> from ddo_sync.queue_db import QueueRepository
     >>> with QueueRepository(":memory:") as qr:
-    ...     qr.register_update_page("Update_5_named_items", 
+    ...     qr.register_update_page("Update_5_named_items",
                 "https://ddowiki.com/page/Update_5_named_items")
     ...     qr.enqueue_items(links)
     ...     items = qr.get_pending_items(limit=10)

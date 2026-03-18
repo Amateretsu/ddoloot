@@ -40,7 +40,7 @@ from item_normalizer.parser import ParsedFields, WikiPageParser
 _DAMAGE_RE = re.compile(r"^(\d+d\d+)([+-]\d+)?", re.IGNORECASE)
 
 # Regex to match a critical roll string like "19-20/x3" or "20/x2".
-_CRIT_RE = re.compile(r"(\d+(?:-\d+)?)\s*/\s*[xX×]?(\d+)")
+_CRIT_RE = re.compile(r"(\d+(?:-\d+)?)\s*/\s*[xX×]?(\d+)")  # noqa: RUF001
 
 # Regex to detect a trailing numeric value in an enchantment string: "+5", "-2", "VI".
 _ENCHANT_SUFFIX_RE = re.compile(
@@ -334,7 +334,8 @@ class ItemNormalizer:
             WeaponStats(damage_dice='1d8', damage_bonus=5, ...)
         """
         weapon_keys = {
-            "damage", "critical_roll", "handedness", "proficiency", "weapon_type", "enchantment_bonus",
+            "damage", "critical_roll", "handedness",
+            "proficiency", "weapon_type", "enchantment_bonus",
         }
         if not weapon_keys.intersection(fields):
             return None
@@ -395,7 +396,8 @@ class ItemNormalizer:
             ArmorStats(armor_type='Heavy', armor_bonus=9, ...)
         """
         armor_keys = {
-            "armor_type", "armor_bonus", "max_dex_bonus", "armor_check_penalty", "arcane_spell_failure",
+            "armor_type", "armor_bonus", "max_dex_bonus",
+            "armor_check_penalty", "arcane_spell_failure",
         }
         if not armor_keys.intersection(fields):
             return None

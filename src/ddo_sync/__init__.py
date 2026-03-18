@@ -52,24 +52,19 @@ from ddo_sync.update_page_parser import UpdatePageParser
 from ddo_sync.wiki_api import WikiApiClient
 
 __all__ = [
-    # Orchestration
+    "DDOSyncError",
     "DDOSyncer",
-    # Discovery
-    "UpdatePageDiscoverer",
-    # Infrastructure
-    "QueueRepository",
-    "WikiApiClient",
-    "UpdatePageParser",
-    # Models
     "ItemLink",
+    "QueueDbError",
     "QueueItem",
+    "QueueRepository",
+    "QueueSchemaError",
     "QueueStats",
     "SyncStatus",
-    "UpdatePageStatus",
-    # Exceptions
-    "DDOSyncError",
+    "UpdatePageDiscoverer",
     "UpdatePageError",
+    "UpdatePageParser",
+    "UpdatePageStatus",
+    "WikiApiClient",
     "WikiApiError",
-    "QueueDbError",
-    "QueueSchemaError",
 ]

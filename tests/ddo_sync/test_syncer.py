@@ -147,7 +147,7 @@ class TestProcessQueue:
         assert success == 0
         assert failures == 0
 
-    def test_processes_pending_items(self, syncer, queue_repo):
+    def test_processes_pending_items(self, syncer, queue_repo):  # noqa: ARG002
         syncer.register_update_page(PAGE_NAME)
         syncer.sync_update_page(PAGE_NAME)
         success, failures = syncer.process_queue()
@@ -181,7 +181,7 @@ class TestProcessQueue:
         success, _ = syncer.process_queue(limit=1)
         assert success == 1
 
-    def test_upserts_to_item_repo(self, syncer, mock_item_repo, queue_repo):
+    def test_upserts_to_item_repo(self, syncer, mock_item_repo, queue_repo):  # noqa: ARG002
         syncer.register_update_page(PAGE_NAME)
         syncer.sync_update_page(PAGE_NAME)
         syncer.process_queue()
@@ -216,7 +216,7 @@ class TestGetStatus:
         status = syncer.get_status()
         assert isinstance(status, SyncStatus)
 
-    def test_queue_stats_reflect_state(self, syncer, queue_repo):
+    def test_queue_stats_reflect_state(self, syncer, queue_repo):  # noqa: ARG002
         syncer.register_update_page(PAGE_NAME)
         syncer.sync_update_page(PAGE_NAME)
         status = syncer.get_status()

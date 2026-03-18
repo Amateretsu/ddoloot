@@ -21,11 +21,11 @@ from item_normalizer.models import (
 # ---------------------------------------------------------------------------
 
 def _make_item(**overrides) -> DDOItem:
-    defaults = dict(
-        name="Test Item",
-        wiki_url="https://ddowiki.com/page/Item:Test_Item",
-        scraped_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
-    )
+    defaults = {
+        "name": "Test Item",
+        "wiki_url": "https://ddowiki.com/page/Item:Test_Item",
+        "scraped_at": datetime(2024, 1, 1, tzinfo=timezone.utc),
+    }
     defaults.update(overrides)
     return DDOItem(**defaults)
 

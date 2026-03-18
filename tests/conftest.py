@@ -8,5 +8,5 @@ messages can add their own handler via loguru's `add()` API.
 from loguru import logger
 
 
-def pytest_configure(config):
+def pytest_configure(config):  # noqa: ARG001
     logger.remove()  # drop the default stderr sink

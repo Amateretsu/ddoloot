@@ -291,7 +291,7 @@ class TestResetFailedToPending:
 # ── Queue reads ───────────────────────────────────────────────────────────────
 
 class TestGetPendingItems:
-    def test_returns_pending_only(self, queue_repo, item_links, sword_link):
+    def test_returns_pending_only(self, queue_repo, item_links, sword_link):  # noqa: ARG002
         _register(queue_repo)
         _enqueue(queue_repo, item_links)
         # Mark one complete
