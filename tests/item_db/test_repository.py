@@ -80,7 +80,7 @@ class TestUpsert:
         repo.upsert(cloak_item)
 
         fewer_enchants = DDOItem(
-            **{**cloak_item.model_dump(), "enchantments": [Enchantment(name="Resistance", value="+5")]}
+            **{**cloak_item.model_dump(), "enchantments": [Enchantment(name="Resistance", value=5)]}
         )
         repo.upsert(fewer_enchants)
 

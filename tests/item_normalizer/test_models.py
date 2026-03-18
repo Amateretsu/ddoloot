@@ -42,8 +42,8 @@ class TestEnchantment:
         assert enc.value is None
 
     def test_name_and_value(self) -> None:
-        enc = Enchantment(name="Resistance", value="+5")
-        assert enc.value == "+5"
+        enc = Enchantment(name="Resistance", value=5)
+        assert enc.value == 5
 
     def test_frozen(self) -> None:
         enc = Enchantment(name="Metalline")
@@ -156,7 +156,7 @@ class TestDDOItem:
     def test_to_json_round_trip(self) -> None:
         item = _make_item(
             minimum_level=15,
-            enchantments=[Enchantment(name="Resistance", value="+5")],
+            enchantments=[Enchantment(name="Resistance", value=5)],
         )
         json_str = item.to_json()
         parsed = json.loads(json_str)
