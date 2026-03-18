@@ -207,7 +207,7 @@ line-length = 88
 
 [tool.isort]
 profile = "black"
-known_first_party = ["ddowiki_scraper"]
+known_first_party = ["ddowiki_scraper", "item_normalizer", "item_db", "ddo_sync"]
 
 
 # https://beta.ruff.rs/docs
@@ -291,7 +291,7 @@ ignore = [
 python_version = "3.9"
 follow_imports = "skip"
 ignore_missing_imports = true
-files = ["src/ddowiki_scraper", "src/item_normalizer", "src/item_db"]
+files = ["src/ddowiki_scraper", "src/item_normalizer", "src/item_db", "src/ddo_sync"]
 
 
 # Configuration for pytest
@@ -317,10 +317,10 @@ markers = [
 
 # Configuration for coverage.py
 [tool.coverage.run]
-source = ["src/ddowiki_scraper", "src/item_normalizer", "src/item_db"]
+source = ["src/ddowiki_scraper", "src/item_normalizer", "src/item_db", "src/ddo_sync"]
 
 
 # Configuration for vulture
 [tool.vulture]
 min_confidence = 100
-paths = ["src/ddowiki_scraper", "src/item_normalizer", "src/item_db", "tests"]
+paths = ["src/ddowiki_scraper", "src/item_normalizer", "src/item_db", "src/ddo_sync", "tests"]
