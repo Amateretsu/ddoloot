@@ -10,7 +10,7 @@ Schema version is tracked in the user_version PRAGMA so future migrations
 can detect the current version.
 """
 
-SCHEMA_VERSION: int = 2
+SCHEMA_VERSION: int = 3
 
 SCHEMA_SQL: str = """
 PRAGMA foreign_keys = ON;
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS items (
     material        TEXT,
     hardness        INTEGER,
     durability      INTEGER,
-    base_value      TEXT,
+    base_value      INTEGER,
     weight          REAL,
     flavor_text     TEXT,
     wiki_url        TEXT    NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS enchantments (
     item_id     INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     position    INTEGER NOT NULL,
     name        TEXT    NOT NULL,
-    value       TEXT
+    value       INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_enchantments_item ON enchantments(item_id);
 

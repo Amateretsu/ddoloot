@@ -32,6 +32,7 @@ from typing import List, Optional
 from loguru import logger
 
 from ddowiki_scraper import WikiFetcher, WikiFetcherConfig
+from ddowiki_scraper.exceptions import FetchError, RobotsTxtError
 from item_db import ItemRepository
 from item_normalizer import ItemNormalizer
 
@@ -46,6 +47,8 @@ _ROOT    = Path(__file__).resolve().parent.parent.parent  # …/src/ddo_sync →
 DATA_DIR = _ROOT / "data"
 LOOT_DB  = DATA_DIR / "loot.db"
 QUEUE_DB = DATA_DIR / "queue.db"
+
+WIKI_URL_BASE = "https://ddowiki.com/page/Item:"
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
@@ -99,6 +102,17 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="SECONDS",
         dest="rate_limit",
         help="Seconds between HTTP requests (default: 2.5, minimum: 1.0).",
+    )
+    p.add_argument(
+        "--item",
+        type=str,
+        default=None,
+        help="Sync an individual item, e.g. Lenses of Opportunity.",
+    )
+    p.add_argument(
+        "--item-override",
+        action="store_true",
+        help="Overwrite existing data in the db file during an item sync.",
     )
     p.add_argument(
         "--verbose",
@@ -287,6 +301,58 @@ def _install_sigint_handler() -> None:
     signal.signal(signal.SIGINT, _handler)
 
 
+def _normalize_item(item: str, upsert: bool) -> None:
+    """Normalize an item and inspect typed fields."""
+    
+    logger.debug(f"Normalizing {item}")
+    
+    config = WikiFetcherConfig(
+        rate_limit_delay=2.5,
+        respect_robots_txt=True,
+    )
+
+    with WikiFetcher(config) as fetcher:
+        try:
+            html = fetcher.fetch_item_page(item)
+            print(f"Fetched {len(html):,} bytes")
+            print(f"Page title found: {item in html}")
+        except RobotsTxtError as e:
+            print(f"Blocked by robots.txt: {e}")
+        except FetchError as e:
+            print(f"Fetch failed (HTTP {e.status_code}): {e}")
+
+        normalizer = ItemNormalizer()
+        item = normalizer.normalize(html, wiki_url=f"{WIKI_URL_BASE}{item}")
+
+        logger.debug(f"Name          : {item.name}")
+        logger.debug(f"Slot          : {item.slot}")
+        logger.debug(f"Minimum level : {item.minimum_level}  (int, not string)")
+        logger.debug(f"Binding       : {item.binding}")
+        logger.debug(f"Material      : {item.material}")
+        logger.debug(f"Hardness      : {item.hardness}")
+        logger.debug(f"Durability    : {item.durability}")
+        logger.debug(f"Weight        : {item.weight} lbs")
+        logger.debug(f"Flavor text   : {item.flavor_text!r}")
+
+        print(f"\nEnchantments ({len(item.enchantments)}):")
+        for enc in item.enchantments:
+            value_str = f" {enc.value}" if enc.value else ""
+            print(f"  - {enc.name}{value_str}")
+
+        if item.named_set:
+            print(f"\nNamed set: {item.named_set.name}")
+
+        if item.source:
+            print(f"Source quests: {item.source.quests}")
+            
+        with ItemRepository(str(LOOT_DB)) as item_repo:
+            if (upsert):
+                item_repo.upsert(item)
+                logger.info(f"Upserted item: {item}")
+            else:
+                item_repo.save(item)
+                logger.info(f"Saved item: {item}")
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -299,6 +365,8 @@ def main() -> int:
         return _cmd_discover()
     if args.reset_failed:
         return _cmd_reset_failed()
+    if args.item:
+        return _normalize_item(args.item, args.item_override)
 
     return _cmd_sync(
         page_names=args.pages,

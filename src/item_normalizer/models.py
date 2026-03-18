@@ -28,11 +28,12 @@ class Enchantment(BaseModel):
 
     Attributes:
         name: The enchantment name (e.g. 'Resistance', 'Superior Devotion')
-        value: The enchantment value if present (e.g. '+5', 'VI')
+        value: The enchantment tier/magnitude as an integer if present
+               (e.g. Resistance +5 → 5, Armor Class -2 → -2, Superior Devotion VI → 6)
 
     Example:
-        >>> Enchantment(name="Resistance", value="+5")
-        Enchantment(name='Resistance', value='+5')
+        >>> Enchantment(name="Resistance", value=5)
+        Enchantment(name='Resistance', value=5)
         >>> Enchantment(name="Metalline")
         Enchantment(name='Metalline', value=None)
     """
@@ -40,7 +41,7 @@ class Enchantment(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     name: str
-    value: Optional[str] = None
+    value: Optional[int] = None
 
 
 class WeaponStats(BaseModel):
@@ -188,7 +189,7 @@ class DDOItem(BaseModel):
         material: Physical material (e.g. 'Cloth', 'Cold Iron', 'Mithral')
         hardness: Item hardness for damage resistance calculations
         durability: Maximum durability points
-        base_value: Sale value as a string (e.g. '12,650 gp')
+        base_value: Sale value in copper pieces (1 pp = 1000 cp, 1 gp = 100 cp, 1 sp = 10 cp)
         weight: Weight in pounds
         enchantments: List of magical properties on the item
         weapon_stats: Weapon-specific stats; None if item is not a weapon
@@ -231,7 +232,7 @@ class DDOItem(BaseModel):
     material: Optional[str] = None
     hardness: Optional[int] = None
     durability: Optional[int] = None
-    base_value: Optional[str] = None
+    base_value: Optional[int] = None
     weight: Optional[float] = None
 
     # Enchantments

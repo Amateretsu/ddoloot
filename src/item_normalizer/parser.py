@@ -17,7 +17,7 @@ Example:
 import re
 from typing import Any, Optional
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, NavigableString, Tag
 from loguru import logger
 
 from item_normalizer.exceptions import ParseError
@@ -29,17 +29,20 @@ FIELD_ALIASES: dict[str, str] = {
     "minimum level": "minimum_level",
     "min level": "minimum_level",
     "required race": "required_race",
+    "race absolutely required": "required_race",
     "required class": "required_class",
     "binding": "binding",
     "item type": "item_type",
     "equips to": "slot",
     "slot": "slot",
     "material": "material",
+    "made from": "material",
     "hardness": "hardness",
     "durability": "durability",
     "base value": "base_value",
     "weight": "weight",
     "damage": "damage",
+    "damage and type": "damage",
     "damage type": "damage_type",
     "critical roll": "critical_roll",
     "critical threat range": "critical_roll",
@@ -47,6 +50,7 @@ FIELD_ALIASES: dict[str, str] = {
     "enhancement bonus": "enchantment_bonus",
     "handedness": "handedness",
     "proficiency": "proficiency",
+    "proficiency class": "proficiency",
     "weapon type": "weapon_type",
     "armor type": "armor_type",
     "armor bonus": "armor_bonus",
@@ -113,15 +117,16 @@ class WikiPageParser:
             'https://ddowiki.com/page/Item:Foo'
         """
         soup = self._get_soup(html)
+        self._strip_tooltips(soup)
 
         name = self._extract_name(soup)
         logger.debug(f"Parsed item name: {name!r}")
 
-        infobox = self._find_infobox(soup)
+        tables = self._find_tables(soup)
         raw_fields: ParsedFields = {"name": name, "wiki_url": wiki_url}
 
-        if infobox is not None:
-            raw_fields.update(self._extract_infobox_fields(infobox))
+        if tables is not None:
+            raw_fields.update(self._extract_infobox_fields(tables))
         else:
             logger.warning(f"No infobox table found for item: {name!r}")
 
@@ -129,6 +134,23 @@ class WikiPageParser:
         raw_fields.setdefault("flavor_text", self._extract_flavor_text(soup))
 
         return raw_fields
+
+    def _strip_tooltips(self, soup: BeautifulSoup) -> None:
+        """Remove popup tooltip spans so their text doesn't pollute field values.
+
+        DDO Wiki wraps many values in:
+            <span class="popup has_tooltip">visible text
+                <span class="popup tooltip">full description...</span>
+            </span>
+        BeautifulSoup's get_text() captures both spans, doubling the text.
+        Decomposing the inner tooltip span before any extraction prevents this.
+        """
+        for span in soup.find_all("span", class_="tooltip"):
+            span.decompose()
+        # Sortkey spans hold zero-padded numeric sort values (e.g. "0003620000")
+        # that pollute field text when captured by get_text().
+        for span in soup.find_all("span", class_="sortkey"):
+            span.decompose()
 
     def _get_soup(self, html: str) -> BeautifulSoup:
         """Parse HTML with the stdlib html.parser.
@@ -181,7 +203,7 @@ class WikiPageParser:
             field="name",
         )
 
-    def _find_infobox(self, soup: BeautifulSoup) -> Optional[Tag]:
+    def _find_tables(self, soup: BeautifulSoup) -> Optional[Tag]:
         """Locate the main item infobox table.
 
         DDO Wiki item pages have one primary wikitable. The infobox fields
@@ -194,13 +216,14 @@ class WikiPageParser:
             The outer wikitable Tag, or None if not found
 
         Example:
-            >>> infobox = parser._find_infobox(soup)
+            >>> infobox = parser._find_tables(soup)
             >>> infobox is not None
             True
         """
-        return soup.find("table", class_="wikitable")
+        logger.debug(f"Found table(s): {True if soup.find_all("table", class_="wikitable") else False}")
+        return soup.find_all("table")
 
-    def _extract_infobox_fields(self, infobox: Tag) -> ParsedFields:
+    def _extract_infobox_fields(self, tables: list) -> ParsedFields:
         """Walk every <th>/<td> row in the infobox and return canonical field values.
 
         The infobox key (from <th>) is lowercased, stripped of trailing colons
@@ -223,28 +246,33 @@ class WikiPageParser:
             ['Slashing', 'Magic']
         """
         fields: ParsedFields = {}
+        cnt = 0
 
-        for row in infobox.find_all("tr"):
-            th = row.find("th")
-            td = row.find("td")
+        logger.debug(f"Processing {len(tables)} table(s)...")        
+        for table in tables:
+            cnt += 1
+            logger.debug(f"Found {len(table.find_all("tr"))} row(s) in table {cnt}.")
+            for row in table.find_all("tr"):
+                th = row.find("th")
+                td = row.find("td")
 
-            if not th or not td:
-                continue
+                if not th or not td:
+                    continue
+                                
+                raw_key = th.get_text(strip=True).rstrip(":").strip().lower()
+                canonical = FIELD_ALIASES.get(raw_key)
 
-            raw_key = th.get_text(strip=True).rstrip(":").strip().lower()
-            canonical = FIELD_ALIASES.get(raw_key)
+                if canonical is None:
+                    logger.warning(f"Unknown infobox field ignored: {raw_key!r}")
+                    continue
+                
+                raw_value = td.get_text(separator=" ", strip=True)
 
-            if canonical is None:
-                logger.debug(f"Unknown infobox field ignored: {raw_key!r}")
-                continue
-
-            raw_value = td.get_text(separator=" ", strip=True)
-
-            if canonical in LIST_FIELDS:
-                fields[canonical] = [v.strip() for v in raw_value.split(",") if v.strip()]
-            else:
-                fields[canonical] = raw_value
-
+                if canonical in LIST_FIELDS:
+                    fields[canonical] = [v.strip() for v in raw_value.split(",") if v.strip()]
+                else:
+                    fields[canonical] = raw_value
+                    
         return fields
 
     def _extract_enchantments(self, soup: BeautifulSoup) -> list[str]:
@@ -264,6 +292,20 @@ class WikiPageParser:
             >>> parser._extract_enchantments(soup)
             ['Superior Devotion VI', 'Resistance +5']
         """
+        # Strategy 1: infobox <th>Enchantments</th> → sibling <td> → <ul>
+        for th in soup.find_all("th"):
+            if re.fullmatch(r"enchantments?", th.get_text(strip=True), re.IGNORECASE):
+                row = th.find_parent("tr")
+                if row:
+                    td = row.find("td")
+                    if td:
+                        ul = td.find("ul")
+                        if ul:
+                            items = self._extract_li_texts(ul)
+                            logger.debug(f"Extracted {len(items)} enchantments (infobox th/td strategy)")
+                            return items
+
+        # Strategy 2: standalone <b>/<strong> label followed by a <ul>
         enchant_label = soup.find(
             ["b", "strong"],
             string=re.compile(r"enchantment", re.IGNORECASE),
@@ -278,13 +320,17 @@ class WikiPageParser:
             logger.debug("Enchantments label found but no following <ul>")
             return []
 
-        items = [
+        items = self._extract_li_texts(ul)
+        logger.debug(f"Extracted {len(items)} enchantments (bold label strategy)")
+        return items
+
+    def _extract_li_texts(self, ul: Tag) -> list[str]:
+        """Return non-empty text strings for every <li> in a <ul>."""
+        return [
             li.get_text(separator=" ", strip=True)
             for li in ul.find_all("li")
             if li.get_text(strip=True)
         ]
-        logger.debug(f"Extracted {len(items)} enchantments")
-        return items
 
     def _extract_flavor_text(self, soup: BeautifulSoup) -> Optional[str]:
         """Extract the item's flavor/lore text from the first qualifying italic tag.

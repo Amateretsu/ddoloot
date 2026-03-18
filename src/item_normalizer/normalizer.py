@@ -48,11 +48,12 @@ _ENCHANT_SUFFIX_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Roman numerals recognised as enchantment tier suffixes.
-_ROMAN = frozenset({
-    "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X",
-    "XI", "XII", "XIII", "XIV", "XV",
-})
+# Roman numeral → integer mapping for enchantment tier suffixes.
+_ROMAN: dict[str, int] = {
+    "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
+    "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10,
+    "XI": 11, "XII": 12, "XIII": 13, "XIV": 14, "XV": 15,
+}
 
 
 class ItemNormalizer:
@@ -112,7 +113,7 @@ class ItemNormalizer:
                 material=fields.get("material"),
                 hardness=self._coerce_int("hardness", fields.get("hardness")),
                 durability=self._coerce_int("durability", fields.get("durability")),
-                base_value=fields.get("base_value"),
+                base_value=self._coerce_copper("base_value", fields.get("base_value")),
                 weight=self._coerce_float("weight", fields.get("weight")),
                 enchantments=self._parse_enchantments(fields.get("enchantments", [])),
                 weapon_stats=self._parse_weapon_stats(fields),
@@ -207,9 +208,63 @@ class ItemNormalizer:
         logger.warning(f"Could not coerce {field!r} to percent int: {raw!r}")
         return None
 
+    def _coerce_copper(self, field: str, raw: Optional[str]) -> Optional[int]:
+        """Convert a currency string to total copper pieces.
+
+        DDO currency denominations:
+            1 pp = 1000 cp,  1 gp = 100 cp,  1 sp = 10 cp,  1 cp = 1 cp
+
+        Handles single-denomination values ("3,620 pp") and compound values
+        ("3 pp, 2 gp, 5 sp, 8 cp"). Commas in numbers are ignored.
+
+        Args:
+            field: Field name for logging context
+            raw: Raw string value from the infobox
+
+        Returns:
+            Total value in copper pieces, or None if unparseable
+
+        Example:
+            >>> normalizer._coerce_copper("base_value", "3,620 pp")
+            3620000
+            >>> normalizer._coerce_copper("base_value", "2 gp, 5 sp")
+            250
+        """
+        if raw is None:
+            return None
+
+        _DENOM = {"pp": 1000, "gp": 100, "sp": 10, "cp": 1}
+        total = 0
+        found = False
+        for m in re.finditer(r"([\d,]+)\s*(pp|gp|sp|cp)", raw, re.IGNORECASE):
+            amount = int(m.group(1).replace(",", ""))
+            total += amount * _DENOM[m.group(2).lower()]
+            found = True
+
+        if not found:
+            logger.warning(f"Could not coerce {field!r} to copper: {raw!r}")
+            return None
+        return total
+
     # ------------------------------------------------------------------
     # Enchantment parsing
     # ------------------------------------------------------------------
+
+    def _suffix_to_int(self, suffix: str) -> Optional[int]:
+        """Convert an enchantment suffix string to an integer.
+
+        Handles signed numeric strings ("+5", "-2", "10") and Roman numerals
+        ("VI" → 6). Returns None if the suffix is empty or unrecognised.
+        """
+        if not suffix:
+            return None
+        upper = suffix.upper()
+        if upper in _ROMAN:
+            return _ROMAN[upper]
+        try:
+            return int(suffix)
+        except ValueError:
+            return None
 
     def _parse_enchantments(self, raw_list: list) -> list[Enchantment]:
         """Convert a list of raw enchantment strings to Enchantment models.
@@ -227,9 +282,9 @@ class ItemNormalizer:
 
         Example:
             >>> normalizer._parse_enchantments(["Resistance +5", "Metalline", "Superior Devotion VI"])
-            [Enchantment(name='Resistance', value='+5'),
+            [Enchantment(name='Resistance', value=5),
              Enchantment(name='Metalline', value=None),
-             Enchantment(name='Superior Devotion', value='VI')]
+             Enchantment(name='Superior Devotion', value=6)]
         """
         result: list[Enchantment] = []
         for raw in raw_list:
@@ -239,8 +294,8 @@ class ItemNormalizer:
 
             # Strategy 1: colon separator ("Resistance: +5")
             if ": " in raw:
-                name, _, value = raw.partition(": ")
-                result.append(Enchantment(name=name.strip(), value=value.strip() or None))
+                name, _, value_str = raw.partition(": ")
+                result.append(Enchantment(name=name.strip(), value=self._suffix_to_int(value_str.strip())))
                 continue
 
             # Strategy 2: trailing numeric or Roman numeral suffix
@@ -250,7 +305,7 @@ class ItemNormalizer:
                 suffix = match.group(2).strip()
                 # Validate Roman numerals against known set (avoids false matches on 'V' in names)
                 if suffix.lstrip("+-").isdigit() or suffix.upper() in _ROMAN:
-                    result.append(Enchantment(name=name_part, value=suffix))
+                    result.append(Enchantment(name=name_part, value=self._suffix_to_int(suffix)))
                     continue
 
             # Strategy 3: whole string is the name
