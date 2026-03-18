@@ -18,6 +18,8 @@ Example:
     ...     print(f"Failed to fetch: {e}")
 """
 
+from __future__ import annotations
+
 
 class WikiFetcherError(Exception):
     """Base exception for all WikiFetcher errors.

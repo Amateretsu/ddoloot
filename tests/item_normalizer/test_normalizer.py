@@ -153,7 +153,7 @@ class TestNormalizeWeapon:
         item = normalizer.normalize(weapon_html, WIKI_URL)
         crit = next((e for e in item.enchantments if "Critical" in e.name), None)
         assert crit is not None
-        assert crit.value == None
+        assert crit.value is None
 
 
 class TestNormalizeArmor:
