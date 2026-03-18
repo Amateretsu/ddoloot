@@ -44,6 +44,7 @@ dependencies = [
     "loguru>=0.7.0",
     "tenacity>=8.2.0",
     "pydantic>=2.0.0",
+    "beautifulsoup4>=4.12.0",
 ]
 
 [project.urls]
@@ -290,7 +291,7 @@ ignore = [
 python_version = "3.9"
 follow_imports = "skip"
 ignore_missing_imports = true
-files = "src/ddowiki_scraper"
+files = ["src/ddowiki_scraper", "src/item_normalizer"]
 
 
 # Configuration for pytest
@@ -316,10 +317,10 @@ markers = [
 
 # Configuration for coverage.py
 [tool.coverage.run]
-source = ["src/ddowiki_scraper"]
+source = ["src/ddowiki_scraper", "src/item_normalizer"]
 
 
 # Configuration for vulture
 [tool.vulture]
 min_confidence = 100
-paths = ["src/ddowiki_scraper", "tests"]
+paths = ["src/ddowiki_scraper", "src/item_normalizer", "tests"]
