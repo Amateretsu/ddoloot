@@ -7,7 +7,6 @@ Exception hierarchy:
     └── DuplicateItemError — item already exists (use upsert to overwrite)
 """
 
-from typing import Optional
 
 
 class ItemDbError(Exception):

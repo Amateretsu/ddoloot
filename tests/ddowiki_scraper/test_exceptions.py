@@ -9,7 +9,6 @@ import time
 import pytest
 
 from ddowiki_scraper.rate_limiter import RateLimiter
-from ddowiki_scraper.exceptions import RateLimitError
 
 
 class TestRateLimiter:

@@ -17,7 +17,7 @@ Example:
 import re
 from typing import Any, Optional
 
-from bs4 import BeautifulSoup, NavigableString, Tag
+from bs4 import BeautifulSoup, Tag
 from loguru import logger
 
 from item_normalizer.exceptions import ParseError

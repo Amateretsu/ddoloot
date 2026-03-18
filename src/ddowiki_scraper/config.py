@@ -15,7 +15,6 @@ Example:
     3.0
 """
 
-from typing import Optional
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 

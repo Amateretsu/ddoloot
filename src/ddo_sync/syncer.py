@@ -26,7 +26,7 @@ from item_db.repository import ItemRepository
 from item_normalizer.normalizer import ItemNormalizer
 
 from ddo_sync.exceptions import UpdatePageError
-from ddo_sync.models import ItemLink, SyncStatus, UpdatePageStatus
+from ddo_sync.models import ItemLink, SyncStatus
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.update_page_parser import UpdatePageParser
 from ddo_sync.wiki_api import WikiApiClient

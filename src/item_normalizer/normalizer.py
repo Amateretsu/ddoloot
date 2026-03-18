@@ -24,7 +24,7 @@ from typing import Optional
 
 from loguru import logger
 
-from item_normalizer.exceptions import NormalizationError, ParseError
+from item_normalizer.exceptions import NormalizationError
 from item_normalizer.models import (
     ArmorStats,
     DDOItem,

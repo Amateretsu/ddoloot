@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import timezone
 
-import pytest
 
-from ddo_sync.exceptions import QueueDbError, QueueSchemaError
 from ddo_sync.models import ItemLink, QueueItem, QueueStats, UpdatePageStatus
 from ddo_sync.queue_db import QueueRepository
 
@@ -14,9 +12,6 @@ from tests.ddo_sync.conftest import (
     MODIFIED_AFTER,
     MODIFIED_BEFORE,
     SYNCED_AT,
-    item_links,
-    shield_link,
-    sword_link,
     utc,
 )
 

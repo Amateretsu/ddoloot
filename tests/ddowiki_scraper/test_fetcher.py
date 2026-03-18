@@ -4,25 +4,20 @@ Tests WikiFetcher functionality including sync/async fetching, rate limiting,
 error handling, robots.txt compliance, and session management using mocked responses.
 """
 
-import asyncio
 import time
 from typing import Any
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch
 
 import pytest
 import aiohttp
 import requests
-from pydantic import ValidationError
 
 from ddowiki_scraper.config import WikiFetcherConfig
 from ddowiki_scraper.exceptions import (
-    WikiFetcherError,
-    RateLimitError,
     RobotsTxtError,
     FetchError,
 )
 from ddowiki_scraper.fetcher import WikiFetcher
-from ddowiki_scraper.rate_limiter import RateLimiter
 
 
 # Fixtures

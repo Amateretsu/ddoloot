@@ -296,16 +296,16 @@ def _print_summary(status: SyncStatus) -> None:
 
 
 def _install_sigint_handler() -> None:
-    def _handler(sig, frame):  # noqa: ANN001
+    def _handler(sig, frame):
         raise KeyboardInterrupt
     signal.signal(signal.SIGINT, _handler)
 
 
 def _normalize_item(item: str, upsert: bool) -> None:
     """Normalize an item and inspect typed fields."""
-    
+
     logger.debug(f"Normalizing {item}")
-    
+
     config = WikiFetcherConfig(
         rate_limit_delay=2.5,
         respect_robots_txt=True,
@@ -344,7 +344,7 @@ def _normalize_item(item: str, upsert: bool) -> None:
 
         if item.source:
             print(f"Source quests: {item.source.quests}")
-            
+
         with ItemRepository(str(LOOT_DB)) as item_repo:
             if (upsert):
                 item_repo.upsert(item)

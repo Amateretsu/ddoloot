@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import List
-from unittest.mock import MagicMock, patch
+from datetime import timezone
+from unittest.mock import MagicMock
 
 import pytest
 
 from ddo_sync.exceptions import UpdatePageError
-from ddo_sync.models import ItemLink, SyncStatus, UpdatePageStatus
+from ddo_sync.models import ItemLink, SyncStatus
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.syncer import DDOSyncer
 
@@ -18,8 +17,6 @@ from tests.ddo_sync.conftest import (
     MODIFIED_BEFORE,
     SYNCED_AT,
     UPDATE_PAGE_HTML,
-    item_links,
-    sword_link,
     utc,
 )
 

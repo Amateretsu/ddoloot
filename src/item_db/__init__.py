@@ -25,10 +25,10 @@ from item_db.exceptions import (
 from item_db.repository import ItemRepository
 
 __all__ = [
-    "ItemRepository",
-    "ItemFilter",
-    "ItemDbError",
-    "ItemNotFoundError",
     "DuplicateItemError",
+    "ItemDbError",
+    "ItemFilter",
+    "ItemNotFoundError",
+    "ItemRepository",
     "SchemaError",
 ]

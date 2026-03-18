@@ -1,11 +1,10 @@
 """Tests for ItemRepository — save, upsert, get, delete, search, and helpers."""
 
-from datetime import datetime, timezone
 
 import pytest
 
 from item_db import ItemFilter, ItemRepository
-from item_db.exceptions import DuplicateItemError, ItemDbError, ItemNotFoundError
+from item_db.exceptions import DuplicateItemError, ItemNotFoundError
 from item_normalizer.models import DDOItem, Enchantment
 
 

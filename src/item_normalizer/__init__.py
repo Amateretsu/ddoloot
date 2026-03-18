@@ -31,15 +31,15 @@ from item_normalizer.models import (
 from item_normalizer.normalizer import ItemNormalizer
 
 __all__ = [
-    "ItemNormalizer",
+    "ArmorStats",
     "DDOItem",
     "Enchantment",
-    "WeaponStats",
-    "ArmorStats",
-    "NamedSet",
-    "SetBonus",
-    "ItemSource",
+    "ItemNormalizer",
     "ItemNormalizerError",
-    "ParseError",
+    "ItemSource",
+    "NamedSet",
     "NormalizationError",
+    "ParseError",
+    "SetBonus",
+    "WeaponStats",
 ]

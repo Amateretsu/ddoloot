@@ -10,7 +10,6 @@ from item_normalizer.models import (
     ArmorStats,
     DDOItem,
     Enchantment,
-    ItemSource,
     NamedSet,
     SetBonus,
     WeaponStats,

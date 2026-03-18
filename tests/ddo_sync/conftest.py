@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import List
-from unittest.mock import MagicMock
 
 import pytest
 
-from ddo_sync.models import ItemLink, QueueItem, QueueStats, UpdatePageStatus
+from ddo_sync.models import ItemLink
 from ddo_sync.queue_db import QueueRepository
 
 

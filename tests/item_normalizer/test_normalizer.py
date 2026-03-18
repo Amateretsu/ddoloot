@@ -4,7 +4,7 @@ from datetime import timezone
 
 import pytest
 
-from item_normalizer.exceptions import NormalizationError, ParseError
+from item_normalizer.exceptions import ParseError
 from item_normalizer.models import DDOItem, WeaponStats, ArmorStats
 from item_normalizer.normalizer import ItemNormalizer
 
