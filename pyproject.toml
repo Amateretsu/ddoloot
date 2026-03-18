@@ -47,6 +47,10 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
 ]
 
+[project.scripts]
+# After `pip install -e .`, run the scraper from anywhere with: ddoloot
+ddoloot = "ddo_sync.cli:main"
+
 [project.urls]
 # Use PyPI-standard names here
 "Homepage" = "https://github.com/Amateretsu/ddoloot"

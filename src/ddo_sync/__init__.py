@@ -45,6 +45,7 @@ from ddo_sync.models import (
     SyncStatus,
     UpdatePageStatus,
 )
+from ddo_sync.page_discovery import UpdatePageDiscoverer
 from ddo_sync.queue_db import QueueRepository
 from ddo_sync.syncer import DDOSyncer
 from ddo_sync.update_page_parser import UpdatePageParser
@@ -53,6 +54,8 @@ from ddo_sync.wiki_api import WikiApiClient
 __all__ = [
     # Orchestration
     "DDOSyncer",
+    # Discovery
+    "UpdatePageDiscoverer",
     # Infrastructure
     "QueueRepository",
     "WikiApiClient",
