@@ -1,14 +1,13 @@
 """Tests for ItemRepository — save, upsert, get, delete, search, and helpers."""
 
-
 import pytest
 
 from item_db import ItemFilter, ItemRepository
 from item_db.exceptions import DuplicateItemError, ItemNotFoundError
 from item_normalizer.models import DDOItem, Enchantment
 
-
 # ── Lifecycle ────────────────────────────────────────────────────────────────
+
 
 class TestLifecycle:
     def test_context_manager_opens_and_closes(self) -> None:
@@ -34,8 +33,11 @@ class TestLifecycle:
 
 # ── Save ────────────────────────────────────────────────────────────────────
 
+
 class TestSave:
-    def test_save_minimal_item(self, repo: ItemRepository, minimal_item: DDOItem) -> None:
+    def test_save_minimal_item(
+        self, repo: ItemRepository, minimal_item: DDOItem
+    ) -> None:
         item_id = repo.save(minimal_item)
         assert isinstance(item_id, int)
         assert item_id >= 1
@@ -45,7 +47,9 @@ class TestSave:
         repo.save(cloak_item)
         assert repo.exists(cloak_item.name)
 
-    def test_save_duplicate_raises(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
+    def test_save_duplicate_raises(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
         repo.save(cloak_item)
         with pytest.raises(DuplicateItemError):
             repo.save(cloak_item)
@@ -57,31 +61,36 @@ class TestSave:
 
 # ── Upsert ───────────────────────────────────────────────────────────────────
 
+
 class TestUpsert:
     def test_upsert_new_item(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
         item_id = repo.upsert(cloak_item)
         assert isinstance(item_id, int)
         assert repo.count() == 1
 
-    def test_upsert_replaces_existing(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
+    def test_upsert_replaces_existing(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
         repo.upsert(cloak_item)
 
         # Build updated version with a changed field
-        updated = DDOItem(
-            **{**cloak_item.model_dump(), "minimum_level": 25}
-        )
+        updated = DDOItem(**{**cloak_item.model_dump(), "minimum_level": 25})
         repo.upsert(updated)
 
         assert repo.count() == 1
         assert repo.get(cloak_item.name).minimum_level == 25
 
-    def test_upsert_replaces_enchantments(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
+    def test_upsert_replaces_enchantments(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
         repo.upsert(cloak_item)
 
-        fewer_enchants = DDOItem(**{
-            **cloak_item.model_dump(),
-            "enchantments": [Enchantment(name="Resistance", value=5)],
-        })
+        fewer_enchants = DDOItem(
+            **{
+                **cloak_item.model_dump(),
+                "enchantments": [Enchantment(name="Resistance", value=5)],
+            }
+        )
         repo.upsert(fewer_enchants)
 
         restored = repo.get(cloak_item.name)
@@ -93,6 +102,7 @@ class TestUpsert:
 
 
 # ── Delete ───────────────────────────────────────────────────────────────────
+
 
 class TestDelete:
     def test_delete_existing(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
@@ -115,6 +125,7 @@ class TestDelete:
 
 # ── Save Many ────────────────────────────────────────────────────────────────
 
+
 class TestSaveMany:
     def test_save_many_all_success(
         self, repo: ItemRepository, cloak_item: DDOItem, weapon_item: DDOItem
@@ -134,6 +145,7 @@ class TestSaveMany:
 
 
 # ── Get ──────────────────────────────────────────────────────────────────────
+
 
 class TestGet:
     def test_get_existing(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
@@ -171,6 +183,7 @@ class TestGet:
 
 
 # ── Round-trip fidelity ──────────────────────────────────────────────────────
+
 
 class TestRoundTrip:
     def test_cloak_round_trip(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
@@ -268,7 +281,9 @@ class TestRoundTrip:
         assert "The Snitch" in src.quests
         assert "The Spinner of Shadows" in src.quests
 
-    def test_source_quest_order(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
+    def test_source_quest_order(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
         repo.save(cloak_item)
         fetched = repo.get(cloak_item.name)
         assert fetched.source.quests == cloak_item.source.quests
@@ -300,6 +315,7 @@ class TestRoundTrip:
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
 
 class TestHelpers:
     def test_list_names_empty(self, repo: ItemRepository) -> None:
@@ -335,6 +351,7 @@ class TestHelpers:
 
 
 # ── Search ───────────────────────────────────────────────────────────────────
+
 
 class TestSearch:
     def _populate(
@@ -465,13 +482,16 @@ class TestSearch:
         results = repo.search(ItemFilter(slot="Back", minimum_level_max=20))
         assert len(results) == 1
 
-    def test_no_match_returns_empty(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
+    def test_no_match_returns_empty(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
         repo.save(cloak_item)
         results = repo.search(ItemFilter(slot="Head"))
         assert results == []
 
 
 # ── Convenience finders ───────────────────────────────────────────────────────
+
 
 class TestFinders:
     def test_find_by_enchantment(
@@ -496,7 +516,9 @@ class TestFinders:
         assert len(items) == 1
         assert items[0].name == cloak_item.name
 
-    def test_find_by_set_no_match(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
+    def test_find_by_set_no_match(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
         repo.save(cloak_item)
         assert repo.find_by_set("Nonexistent Set") == []
 

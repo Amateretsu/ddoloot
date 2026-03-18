@@ -144,7 +144,9 @@ class _ItemReader:
         return NamedSet(
             name=set_row["name"],
             bonuses=[
-                SetBonus(pieces_required=r["pieces_required"], description=r["description"])
+                SetBonus(
+                    pieces_required=r["pieces_required"], description=r["description"]
+                )
                 for r in bonus_rows
             ],
         )

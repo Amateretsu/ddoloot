@@ -5,7 +5,6 @@ import pytest
 from item_normalizer.exceptions import ParseError
 from item_normalizer.parser import WikiPageParser
 
-
 WIKI_URL = "https://ddowiki.com/page/Item:Test"
 
 
@@ -17,6 +16,7 @@ def parser() -> WikiPageParser:
 # ---------------------------------------------------------------------------
 # Name extraction
 # ---------------------------------------------------------------------------
+
 
 class TestExtractName:
     def test_from_h1_firstheading(self, parser: WikiPageParser) -> None:
@@ -49,6 +49,7 @@ class TestExtractName:
 # Infobox field extraction
 # ---------------------------------------------------------------------------
 
+
 class TestExtractInfoboxFields:
     def test_minimum_level(self, parser: WikiPageParser, cloak_html: str) -> None:
         fields = parser.parse(cloak_html, WIKI_URL)
@@ -62,7 +63,9 @@ class TestExtractInfoboxFields:
         fields = parser.parse(cloak_html, WIKI_URL)
         assert fields["material"] == "Cloth"
 
-    def test_hardness_and_durability(self, parser: WikiPageParser, cloak_html: str) -> None:
+    def test_hardness_and_durability(
+        self, parser: WikiPageParser, cloak_html: str
+    ) -> None:
         fields = parser.parse(cloak_html, WIKI_URL)
         assert fields["hardness"] == "14"
         assert fields["durability"] == "100"
@@ -71,22 +74,30 @@ class TestExtractInfoboxFields:
         fields = parser.parse(cloak_html, WIKI_URL)
         assert fields["weight"] == "0.1 lbs"
 
-    def test_slot_alias_equips_to(self, parser: WikiPageParser, cloak_html: str) -> None:
+    def test_slot_alias_equips_to(
+        self, parser: WikiPageParser, cloak_html: str
+    ) -> None:
         fields = parser.parse(cloak_html, WIKI_URL)
         assert fields["slot"] == "Back"
 
-    def test_damage_type_is_list(self, parser: WikiPageParser, weapon_html: str) -> None:
+    def test_damage_type_is_list(
+        self, parser: WikiPageParser, weapon_html: str
+    ) -> None:
         fields = parser.parse(weapon_html, WIKI_URL)
         assert isinstance(fields["damage_type"], list)
         assert "Slashing" in fields["damage_type"]
         assert "Magic" in fields["damage_type"]
 
-    def test_critical_roll_alias(self, parser: WikiPageParser, weapon_html: str) -> None:
+    def test_critical_roll_alias(
+        self, parser: WikiPageParser, weapon_html: str
+    ) -> None:
         fields = parser.parse(weapon_html, WIKI_URL)
         assert "critical_roll" in fields
         assert "19-20" in fields["critical_roll"]
 
-    def test_enhancement_bonus_alias(self, parser: WikiPageParser, weapon_html: str) -> None:
+    def test_enhancement_bonus_alias(
+        self, parser: WikiPageParser, weapon_html: str
+    ) -> None:
         fields = parser.parse(weapon_html, WIKI_URL)
         assert fields["enchantment_bonus"] == "5"
 
@@ -98,7 +109,9 @@ class TestExtractInfoboxFields:
         fields = parser.parse(armor_html, WIKI_URL)
         assert fields["armor_check_penalty"] == "-3"
 
-    def test_arcane_spell_failure(self, parser: WikiPageParser, armor_html: str) -> None:
+    def test_arcane_spell_failure(
+        self, parser: WikiPageParser, armor_html: str
+    ) -> None:
         fields = parser.parse(armor_html, WIKI_URL)
         assert fields["arcane_spell_failure"] == "25%"
 
@@ -130,6 +143,7 @@ class TestExtractInfoboxFields:
 # Enchantment extraction
 # ---------------------------------------------------------------------------
 
+
 class TestExtractEnchantments:
     def test_cloak_enchantments(self, parser: WikiPageParser, cloak_html: str) -> None:
         fields = parser.parse(cloak_html, WIKI_URL)
@@ -144,7 +158,9 @@ class TestExtractEnchantments:
         fields = parser.parse(minimal_html, WIKI_URL)
         assert fields["enchantments"] == []
 
-    def test_weapon_enchantments(self, parser: WikiPageParser, weapon_html: str) -> None:
+    def test_weapon_enchantments(
+        self, parser: WikiPageParser, weapon_html: str
+    ) -> None:
         fields = parser.parse(weapon_html, WIKI_URL)
         assert "Vorpal" in fields["enchantments"]
 
@@ -152,6 +168,7 @@ class TestExtractEnchantments:
 # ---------------------------------------------------------------------------
 # Flavor text extraction
 # ---------------------------------------------------------------------------
+
 
 class TestExtractFlavorText:
     def test_cloak_flavor_text(self, parser: WikiPageParser, cloak_html: str) -> None:
@@ -174,8 +191,11 @@ class TestExtractFlavorText:
 # wiki_url injection
 # ---------------------------------------------------------------------------
 
+
 class TestWikiUrl:
-    def test_wiki_url_is_injected(self, parser: WikiPageParser, cloak_html: str) -> None:
+    def test_wiki_url_is_injected(
+        self, parser: WikiPageParser, cloak_html: str
+    ) -> None:
         url = "https://ddowiki.com/page/Item:Mantle_of_the_Worldshaper"
         fields = parser.parse(cloak_html, url)
         assert fields["wiki_url"] == url

@@ -86,7 +86,9 @@ class QueueStats:
 
     @property
     def total(self) -> int:
-        return self.pending + self.in_progress + self.complete + self.failed + self.skipped
+        return (
+            self.pending + self.in_progress + self.complete + self.failed + self.skipped
+        )
 
 
 @dataclasses.dataclass(frozen=True)

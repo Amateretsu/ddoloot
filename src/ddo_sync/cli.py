@@ -43,15 +43,16 @@ from ddo_sync.queue_db import QueueRepository
 from ddo_sync.syncer import DDOSyncer
 
 # ── Default database paths ────────────────────────────────────────────────────
-_ROOT    = Path(__file__).resolve().parent.parent.parent  # …/src/ddo_sync → root
+_ROOT = Path(__file__).resolve().parent.parent.parent  # …/src/ddo_sync → root
 DATA_DIR = _ROOT / "data"
-LOOT_DB  = DATA_DIR / "loot.db"
+LOOT_DB = DATA_DIR / "loot.db"
 QUEUE_DB = DATA_DIR / "queue.db"
 
 WIKI_URL_BASE = "https://ddowiki.com/page/Item:"
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
+
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -124,6 +125,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 
+
 def _configure_logging(verbose: bool) -> None:
     logger.remove()
     logger.add(
@@ -139,6 +141,7 @@ def _configure_logging(verbose: bool) -> None:
 
 
 # ── Mode handlers ────────────────────────────────────────────────────────────
+
 
 def _cmd_status() -> int:
     if not QUEUE_DB.exists():
@@ -162,8 +165,10 @@ def _cmd_status() -> int:
     logger.info("─" * 56)
     logger.info(f"  Tracked update pages ({len(pages)}):")
     for p in pages:
-        synced = p.last_synced_at.strftime("%Y-%m-%d %H:%M") if p.last_synced_at else "never"
-        flag   = "  [STALE]" if p.needs_resync else ""
+        synced = (
+            p.last_synced_at.strftime("%Y-%m-%d %H:%M") if p.last_synced_at else "never"
+        )
+        flag = "  [STALE]" if p.needs_resync else ""
         logger.info(f"    {p.page_name:<42} synced: {synced}{flag}")
     return 0
 
@@ -298,6 +303,7 @@ def _print_summary(status: SyncStatus) -> None:
 def _install_sigint_handler() -> None:
     def _handler(_sig, _frame):
         raise KeyboardInterrupt
+
     signal.signal(signal.SIGINT, _handler)
 
 
@@ -346,14 +352,16 @@ def _normalize_item(item: str, upsert: bool) -> None:
             print(f"Source quests: {item.source.quests}")  # noqa: T201
 
         with ItemRepository(str(LOOT_DB)) as item_repo:
-            if (upsert):
+            if upsert:
                 item_repo.upsert(item)
                 logger.info(f"Upserted item: {item}")
             else:
                 item_repo.save(item)
                 logger.info(f"Saved item: {item}")
 
+
 # ── Entry point ───────────────────────────────────────────────────────────────
+
 
 def main() -> int:
     args = _build_parser().parse_args()

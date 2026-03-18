@@ -35,7 +35,6 @@ from item_normalizer.models import (
 )
 from item_normalizer.parser import ParsedFields, WikiPageParser
 
-
 # Regex to split a damage string like "1d8+5" into dice and bonus parts.
 _DAMAGE_RE = re.compile(r"^(\d+d\d+)([+-]\d+)?", re.IGNORECASE)
 
@@ -50,9 +49,21 @@ _ENCHANT_SUFFIX_RE = re.compile(
 
 # Roman numeral → integer mapping for enchantment tier suffixes.
 _ROMAN: dict[str, int] = {
-    "I": 1, "II": 2, "III": 3, "IV": 4, "V": 5,
-    "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10,
-    "XI": 11, "XII": 12, "XIII": 13, "XIV": 14, "XV": 15,
+    "I": 1,
+    "II": 2,
+    "III": 3,
+    "IV": 4,
+    "V": 5,
+    "VI": 6,
+    "VII": 7,
+    "VIII": 8,
+    "IX": 9,
+    "X": 10,
+    "XI": 11,
+    "XII": 12,
+    "XIII": 13,
+    "XIV": 14,
+    "XV": 15,
 }
 
 
@@ -106,7 +117,9 @@ class ItemNormalizer:
                 scraped_at=datetime.now(timezone.utc),
                 item_type=fields.get("item_type"),
                 slot=fields.get("slot"),
-                minimum_level=self._coerce_int("minimum_level", fields.get("minimum_level")),
+                minimum_level=self._coerce_int(
+                    "minimum_level", fields.get("minimum_level")
+                ),
                 required_race=fields.get("required_race"),
                 required_class=fields.get("required_class"),
                 binding=fields.get("binding"),
@@ -296,7 +309,9 @@ class ItemNormalizer:
             if ": " in raw:
                 name, _, value_str = raw.partition(": ")
                 result.append(
-                    Enchantment(name=name.strip(), value=self._suffix_to_int(value_str.strip()))
+                    Enchantment(
+                        name=name.strip(), value=self._suffix_to_int(value_str.strip())
+                    )
                 )
                 continue
 
@@ -307,7 +322,9 @@ class ItemNormalizer:
                 suffix = match.group(2).strip()
                 # Validate Roman numerals against known set (avoids false matches on 'V' in names)
                 if suffix.lstrip("+-").isdigit() or suffix.upper() in _ROMAN:
-                    result.append(Enchantment(name=name_part, value=self._suffix_to_int(suffix)))
+                    result.append(
+                        Enchantment(name=name_part, value=self._suffix_to_int(suffix))
+                    )
                     continue
 
             # Strategy 3: whole string is the name
@@ -334,8 +351,12 @@ class ItemNormalizer:
             WeaponStats(damage_dice='1d8', damage_bonus=5, ...)
         """
         weapon_keys = {
-            "damage", "critical_roll", "handedness",
-            "proficiency", "weapon_type", "enchantment_bonus",
+            "damage",
+            "critical_roll",
+            "handedness",
+            "proficiency",
+            "weapon_type",
+            "enchantment_bonus",
         }
         if not weapon_keys.intersection(fields):
             return None
@@ -396,8 +417,11 @@ class ItemNormalizer:
             ArmorStats(armor_type='Heavy', armor_bonus=9, ...)
         """
         armor_keys = {
-            "armor_type", "armor_bonus", "max_dex_bonus",
-            "armor_check_penalty", "arcane_spell_failure",
+            "armor_type",
+            "armor_bonus",
+            "max_dex_bonus",
+            "armor_check_penalty",
+            "arcane_spell_failure",
         }
         if not armor_keys.intersection(fields):
             return None
@@ -405,7 +429,9 @@ class ItemNormalizer:
         return ArmorStats(
             armor_type=fields.get("armor_type"),
             armor_bonus=self._coerce_int("armor_bonus", fields.get("armor_bonus")),
-            max_dex_bonus=self._coerce_int("max_dex_bonus", fields.get("max_dex_bonus")),
+            max_dex_bonus=self._coerce_int(
+                "max_dex_bonus", fields.get("max_dex_bonus")
+            ),
             armor_check_penalty=self._coerce_int(
                 "armor_check_penalty", fields.get("armor_check_penalty")
             ),

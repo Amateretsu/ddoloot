@@ -102,7 +102,9 @@ class QueueRepository:
                 )
             logger.debug(f"Registered update page: {page_name!r}")
         except sqlite3.Error as exc:
-            raise QueueDbError(f"Failed to register update page {page_name!r}: {exc}") from exc
+            raise QueueDbError(
+                f"Failed to register update page {page_name!r}: {exc}"
+            ) from exc
 
     def mark_page_synced(self, page_name: str, synced_at: datetime) -> None:
         """Record when item links were last successfully parsed from the page.
@@ -118,9 +120,13 @@ class QueueRepository:
                     (_iso(synced_at), page_name),
                 )
         except sqlite3.Error as exc:
-            raise QueueDbError(f"Failed to mark page synced {page_name!r}: {exc}") from exc
+            raise QueueDbError(
+                f"Failed to mark page synced {page_name!r}: {exc}"
+            ) from exc
 
-    def set_wiki_modified_at(self, page_name: str, modified_at: Optional[datetime]) -> None:
+    def set_wiki_modified_at(
+        self, page_name: str, modified_at: Optional[datetime]
+    ) -> None:
         """Store the ``wiki_modified_at`` timestamp fetched from the MediaWiki API.
 
         Args:
@@ -149,9 +155,11 @@ class QueueRepository:
             :class:`UpdatePageStatus` with ``needs_resync`` computed, or ``None``.
         """
         try:
-            row = self._get_conn().execute(
-                "SELECT * FROM update_pages WHERE page_name = ?", (page_name,)
-            ).fetchone()
+            row = (
+                self._get_conn()
+                .execute("SELECT * FROM update_pages WHERE page_name = ?", (page_name,))
+                .fetchone()
+            )
             return _row_to_update_page_status(row) if row else None
         except sqlite3.Error as exc:
             raise QueueDbError(
@@ -161,9 +169,11 @@ class QueueRepository:
     def list_update_pages(self) -> List[UpdatePageStatus]:
         """Return :class:`UpdatePageStatus` for every registered update page."""
         try:
-            rows = self._get_conn().execute(
-                "SELECT * FROM update_pages ORDER BY page_name"
-            ).fetchall()
+            rows = (
+                self._get_conn()
+                .execute("SELECT * FROM update_pages ORDER BY page_name")
+                .fetchall()
+            )
             return [_row_to_update_page_status(r) for r in rows]
         except sqlite3.Error as exc:
             raise QueueDbError(f"Failed to list update pages: {exc}") from exc
@@ -206,7 +216,9 @@ class QueueRepository:
                     )
                     inserted += cursor.rowcount
             skipped = len(links) - inserted
-            logger.debug(f"Enqueued {inserted} new items (skipped {skipped} duplicates)")
+            logger.debug(
+                f"Enqueued {inserted} new items (skipped {skipped} duplicates)"
+            )
             return inserted
         except sqlite3.Error as exc:
             raise QueueDbError(f"Failed to enqueue items: {exc}") from exc
@@ -237,7 +249,9 @@ class QueueRepository:
                     (_iso(completed_at), error_message, item_id),
                 )
         except sqlite3.Error as exc:
-            raise QueueDbError(f"Failed to mark item {item_id} as failed: {exc}") from exc
+            raise QueueDbError(
+                f"Failed to mark item {item_id} as failed: {exc}"
+            ) from exc
 
     def mark_skipped(self, item_id: int) -> None:
         """Set an item's status to skipped. No retry will be attempted."""
@@ -267,7 +281,9 @@ class QueueRepository:
                 )
             count = cursor.rowcount
             if count:
-                logger.info(f"Reset {count} failed items to pending (max_retries={max_retries})")
+                logger.info(
+                    f"Reset {count} failed items to pending (max_retries={max_retries})"
+                )
             return count
         except sqlite3.Error as exc:
             raise QueueDbError(f"Failed to reset failed items: {exc}") from exc
@@ -301,9 +317,13 @@ class QueueRepository:
             :class:`QueueStats` with counts for each status.
         """
         try:
-            rows = self._get_conn().execute(
-                "SELECT status, COUNT(*) AS cnt FROM scrape_queue GROUP BY status"
-            ).fetchall()
+            rows = (
+                self._get_conn()
+                .execute(
+                    "SELECT status, COUNT(*) AS cnt FROM scrape_queue GROUP BY status"
+                )
+                .fetchall()
+            )
             counts = {r["status"]: r["cnt"] for r in rows}
             return QueueStats(
                 pending=counts.get("pending", 0),
@@ -325,10 +345,14 @@ class QueueRepository:
             List of :class:`QueueItem`, ordered by ``queued_at``.
         """
         try:
-            rows = self._get_conn().execute(
-                "SELECT * FROM scrape_queue WHERE update_page = ? ORDER BY queued_at",
-                (page_name,),
-            ).fetchall()
+            rows = (
+                self._get_conn()
+                .execute(
+                    "SELECT * FROM scrape_queue WHERE update_page = ? ORDER BY queued_at",
+                    (page_name,),
+                )
+                .fetchall()
+            )
             return [_row_to_queue_item(r) for r in rows]
         except sqlite3.Error as exc:
             raise QueueDbError(
@@ -368,6 +392,7 @@ class QueueRepository:
 
 
 # ── Module-level helpers ─────────────────────────────────────────────────────
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)

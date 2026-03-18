@@ -15,10 +15,10 @@ from item_normalizer.models import (
     WeaponStats,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_item(**overrides) -> DDOItem:
     defaults = {
@@ -33,6 +33,7 @@ def _make_item(**overrides) -> DDOItem:
 # ---------------------------------------------------------------------------
 # Enchantment
 # ---------------------------------------------------------------------------
+
 
 class TestEnchantment:
     def test_name_only(self) -> None:
@@ -57,6 +58,7 @@ class TestEnchantment:
 # ---------------------------------------------------------------------------
 # WeaponStats
 # ---------------------------------------------------------------------------
+
 
 class TestWeaponStats:
     def test_all_optional(self) -> None:
@@ -90,6 +92,7 @@ class TestWeaponStats:
 # ArmorStats
 # ---------------------------------------------------------------------------
 
+
 class TestArmorStats:
     def test_all_optional(self) -> None:
         a = ArmorStats()
@@ -111,6 +114,7 @@ class TestArmorStats:
 # NamedSet / SetBonus
 # ---------------------------------------------------------------------------
 
+
 class TestNamedSet:
     def test_no_bonuses(self) -> None:
         ns = NamedSet(name="Thelanis Fairy Tale")
@@ -129,6 +133,7 @@ class TestNamedSet:
 # DDOItem
 # ---------------------------------------------------------------------------
 
+
 class TestDDOItem:
     def test_minimal_construction(self) -> None:
         item = _make_item()
@@ -138,9 +143,19 @@ class TestDDOItem:
 
     def test_all_optional_fields_are_none(self) -> None:
         item = _make_item()
-        for field in ("item_type", "slot", "required_race", "required_class",
-                      "binding", "material", "weapon_stats", "armor_stats",
-                      "named_set", "source", "flavor_text"):
+        for field in (
+            "item_type",
+            "slot",
+            "required_race",
+            "required_class",
+            "binding",
+            "material",
+            "weapon_stats",
+            "armor_stats",
+            "named_set",
+            "source",
+            "flavor_text",
+        ):
             assert getattr(item, field) is None
 
     def test_extra_fields_forbidden(self) -> None:

@@ -8,7 +8,6 @@ from item_normalizer.exceptions import ParseError
 from item_normalizer.models import DDOItem, WeaponStats, ArmorStats
 from item_normalizer.normalizer import ItemNormalizer
 
-
 WIKI_URL = "https://ddowiki.com/page/Item:Test"
 
 
@@ -21,8 +20,11 @@ def normalizer() -> ItemNormalizer:
 # Full-item smoke tests
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeCloak:
-    def test_returns_ddo_item(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
+    def test_returns_ddo_item(
+        self, normalizer: ItemNormalizer, cloak_html: str
+    ) -> None:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         assert isinstance(item, DDOItem)
 
@@ -38,7 +40,9 @@ class TestNormalizeCloak:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         assert item.material == "Cloth"
 
-    def test_hardness_and_durability(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
+    def test_hardness_and_durability(
+        self, normalizer: ItemNormalizer, cloak_html: str
+    ) -> None:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         assert item.hardness == 14
         assert item.durability == 100
@@ -58,7 +62,9 @@ class TestNormalizeCloak:
         assert "Resistance" in names
         assert "Superior Devotion" in names
 
-    def test_resistance_value(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
+    def test_resistance_value(
+        self, normalizer: ItemNormalizer, cloak_html: str
+    ) -> None:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         resistance = next(e for e in item.enchantments if e.name == "Resistance")
         assert resistance.value == 5
@@ -97,7 +103,9 @@ class TestNormalizeCloak:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         assert item.wiki_url == WIKI_URL
 
-    def test_scraped_at_is_utc(self, normalizer: ItemNormalizer, cloak_html: str) -> None:
+    def test_scraped_at_is_utc(
+        self, normalizer: ItemNormalizer, cloak_html: str
+    ) -> None:
         item = normalizer.normalize(cloak_html, WIKI_URL)
         assert item.scraped_at.tzinfo == timezone.utc
 
@@ -109,7 +117,9 @@ class TestNormalizeCloak:
 
 
 class TestNormalizeWeapon:
-    def test_weapon_stats_present(self, normalizer: ItemNormalizer, weapon_html: str) -> None:
+    def test_weapon_stats_present(
+        self, normalizer: ItemNormalizer, weapon_html: str
+    ) -> None:
         item = normalizer.normalize(weapon_html, WIKI_URL)
         assert item.weapon_stats is not None
         assert isinstance(item.weapon_stats, WeaponStats)
@@ -131,11 +141,15 @@ class TestNormalizeWeapon:
         item = normalizer.normalize(weapon_html, WIKI_URL)
         assert item.weapon_stats.critical_range == "19-20"
 
-    def test_critical_multiplier(self, normalizer: ItemNormalizer, weapon_html: str) -> None:
+    def test_critical_multiplier(
+        self, normalizer: ItemNormalizer, weapon_html: str
+    ) -> None:
         item = normalizer.normalize(weapon_html, WIKI_URL)
         assert item.weapon_stats.critical_multiplier == 2
 
-    def test_enchantment_bonus(self, normalizer: ItemNormalizer, weapon_html: str) -> None:
+    def test_enchantment_bonus(
+        self, normalizer: ItemNormalizer, weapon_html: str
+    ) -> None:
         item = normalizer.normalize(weapon_html, WIKI_URL)
         assert item.weapon_stats.enchantment_bonus == 5
 
@@ -151,7 +165,9 @@ class TestNormalizeWeapon:
         item = normalizer.normalize(weapon_html, WIKI_URL)
         assert item.armor_stats is None
 
-    def test_colon_split_enchantment(self, normalizer: ItemNormalizer, weapon_html: str) -> None:
+    def test_colon_split_enchantment(
+        self, normalizer: ItemNormalizer, weapon_html: str
+    ) -> None:
         item = normalizer.normalize(weapon_html, WIKI_URL)
         crit = next((e for e in item.enchantments if "Critical" in e.name), None)
         assert crit is not None
@@ -159,7 +175,9 @@ class TestNormalizeWeapon:
 
 
 class TestNormalizeArmor:
-    def test_armor_stats_present(self, normalizer: ItemNormalizer, armor_html: str) -> None:
+    def test_armor_stats_present(
+        self, normalizer: ItemNormalizer, armor_html: str
+    ) -> None:
         item = normalizer.normalize(armor_html, WIKI_URL)
         assert item.armor_stats is not None
         assert isinstance(item.armor_stats, ArmorStats)
@@ -176,11 +194,15 @@ class TestNormalizeArmor:
         item = normalizer.normalize(armor_html, WIKI_URL)
         assert item.armor_stats.max_dex_bonus == 3
 
-    def test_armor_check_penalty(self, normalizer: ItemNormalizer, armor_html: str) -> None:
+    def test_armor_check_penalty(
+        self, normalizer: ItemNormalizer, armor_html: str
+    ) -> None:
         item = normalizer.normalize(armor_html, WIKI_URL)
         assert item.armor_stats.armor_check_penalty == -3
 
-    def test_arcane_spell_failure(self, normalizer: ItemNormalizer, armor_html: str) -> None:
+    def test_arcane_spell_failure(
+        self, normalizer: ItemNormalizer, armor_html: str
+    ) -> None:
         item = normalizer.normalize(armor_html, WIKI_URL)
         assert item.armor_stats.arcane_spell_failure == 25
 
@@ -195,7 +217,9 @@ class TestNormalizeArmor:
 
 
 class TestNormalizeMinimal:
-    def test_minimal_item_name(self, normalizer: ItemNormalizer, minimal_html: str) -> None:
+    def test_minimal_item_name(
+        self, normalizer: ItemNormalizer, minimal_html: str
+    ) -> None:
         item = normalizer.normalize(minimal_html, WIKI_URL)
         assert item.name == "Basic Ring"
 
@@ -219,6 +243,7 @@ class TestNormalizeMinimal:
 # ---------------------------------------------------------------------------
 # Error handling
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizerErrors:
     def test_parse_error_propagates(self, normalizer: ItemNormalizer) -> None:

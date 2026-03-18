@@ -18,7 +18,11 @@ Example:
     >>> print(item.to_json())
 """
 
-from item_normalizer.exceptions import ItemNormalizerError, NormalizationError, ParseError
+from item_normalizer.exceptions import (
+    ItemNormalizerError,
+    NormalizationError,
+    ParseError,
+)
 from item_normalizer.models import (
     ArmorStats,
     DDOItem,

@@ -65,7 +65,9 @@ class TestUpdatePageStatus:
     def test_needs_resync_false(self):
         synced = datetime(2025, 11, 2, tzinfo=UTC)
         modified = datetime(2025, 11, 1, tzinfo=UTC)
-        status = self._make(last_synced=synced, wiki_modified=modified, needs_resync=False)
+        status = self._make(
+            last_synced=synced, wiki_modified=modified, needs_resync=False
+        )
         assert status.needs_resync is False
 
     def test_frozen(self):
@@ -84,7 +86,9 @@ class TestSyncStatus:
             wiki_modified_at=None,
             needs_resync=True,
         )
-        status = SyncStatus(queue_stats=stats, update_pages={"Update_5_named_items": page})
+        status = SyncStatus(
+            queue_stats=stats, update_pages={"Update_5_named_items": page}
+        )
         assert status.queue_stats.total == 6
         assert "Update_5_named_items" in status.update_pages
 
@@ -117,6 +121,8 @@ class TestQueueItem:
 
     def test_frozen(self):
         now = datetime(2025, 1, 1, tzinfo=UTC)
-        item = QueueItem(1, "A", "http://x", "Page", "pending", now, None, None, None, 0)
+        item = QueueItem(
+            1, "A", "http://x", "Page", "pending", now, None, None, None, 0
+        )
         with pytest.raises((TypeError, AttributeError)):
             item.status = "complete"  # type: ignore[misc]

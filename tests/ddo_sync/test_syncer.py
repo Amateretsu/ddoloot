@@ -27,6 +27,7 @@ PAGE_URL = "https://ddowiki.com/page/Update_5_named_items"
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def queue_repo() -> QueueRepository:
     repo = QueueRepository(":memory:")
@@ -79,6 +80,7 @@ def syncer(
 
 # ── Registration ──────────────────────────────────────────────────────────────
 
+
 class TestRegisterUpdatePage:
     def test_registers_page_in_queue(self, syncer, queue_repo):
         syncer.register_update_page(PAGE_NAME)
@@ -102,6 +104,7 @@ class TestRegisterUpdatePage:
 
 
 # ── sync_update_page ──────────────────────────────────────────────────────────
+
 
 class TestSyncUpdatePage:
     def test_fetches_correct_url(self, syncer, mock_fetcher):
@@ -140,6 +143,7 @@ class TestSyncUpdatePage:
 
 
 # ── process_queue ─────────────────────────────────────────────────────────────
+
 
 class TestProcessQueue:
     def test_returns_zero_zero_when_empty(self, syncer):
@@ -181,7 +185,9 @@ class TestProcessQueue:
         success, _ = syncer.process_queue(limit=1)
         assert success == 1
 
-    def test_upserts_to_item_repo(self, syncer, mock_item_repo, queue_repo):  # noqa: ARG002
+    def test_upserts_to_item_repo(
+        self, syncer, mock_item_repo, queue_repo  # noqa: ARG002
+    ):
         syncer.register_update_page(PAGE_NAME)
         syncer.sync_update_page(PAGE_NAME)
         syncer.process_queue()
@@ -211,6 +217,7 @@ class TestProcessQueue:
 
 # ── get_status ────────────────────────────────────────────────────────────────
 
+
 class TestGetStatus:
     def test_returns_sync_status(self, syncer):
         status = syncer.get_status()
@@ -229,6 +236,7 @@ class TestGetStatus:
 
 
 # ── sync_all ──────────────────────────────────────────────────────────────────
+
 
 class TestSyncAll:
     def test_returns_sync_status(self, syncer):

@@ -130,7 +130,9 @@ class UpdatePageDiscoverer:
             if not continue_token:
                 break
 
-        logger.debug(f"allpages total: {len(titles)} page(s) with prefix {_ALLPAGES_PREFIX!r}")
+        logger.debug(
+            f"allpages total: {len(titles)} page(s) with prefix {_ALLPAGES_PREFIX!r}"
+        )
         if titles:
             logger.debug(f"First few titles: {titles[:5]}")
         return titles
