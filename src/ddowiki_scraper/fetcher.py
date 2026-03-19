@@ -73,23 +73,27 @@ class WikiFetcher:
         ...     html = await fetcher.fetch_item_page_async("Sword of Shadow")
     """
 
-    def __init__(self, config: WikiFetcherConfig) -> None:
+    def __init__(
+        self,
+        config: WikiFetcherConfig,
+        rate_limiter: Optional[RateLimiter] = None,
+    ) -> None:
         """Initialize the WikiFetcher.
 
         Args:
-            config: Configuration object with scraping parameters
-
-        Raises:
-            ValueError: If config validation fails
-            RobotsTxtError: If robots.txt cannot be parsed (non-fatal, logged as warning)
+            config:       Configuration object with scraping parameters.
+            rate_limiter: Optional pre-configured :class:`RateLimiter`.  When
+                          omitted a new one is created from ``config.rate_limit_delay``.
+                          Inject a custom instance in tests to avoid real delays.
 
         Example:
             >>> config = WikiFetcherConfig(rate_limit_delay=3.0)
             >>> fetcher = WikiFetcher(config)
         """
         self.config = config
-        self._rate_limiter = RateLimiter(config.rate_limit_delay)
+        self._rate_limiter = rate_limiter or RateLimiter(config.rate_limit_delay)
         self._robots_parser: Optional[RobotFileParser] = None
+        self._robots_loaded: bool = False
         self._session: Optional[requests.Session] = None
         self._async_session: Optional[aiohttp.ClientSession] = None
 
@@ -98,59 +102,78 @@ class WikiFetcher:
             f"rate_limit={config.rate_limit_delay}s"
         )
 
-        # Check robots.txt if enabled
-        if config.respect_robots_txt:
-            self._check_robots_txt()
+    def _ensure_robots_loaded(self) -> None:
+        """Lazily fetch and parse robots.txt on the first call.  Idempotent.
 
-    def _check_robots_txt(self) -> None:
-        """Check and parse robots.txt from the wiki.
+        Behaviour on failure depends on :attr:`WikiFetcherConfig.robots_txt_fail_open`:
 
-        Downloads and parses robots.txt to verify scraping is allowed.
-        Sets up the robots parser for subsequent URL checks.
-
-        If robots.txt cannot be fetched or parsed, logs a warning but does
-        not raise an exception (fails open to allow scraping).
+        * ``True``  (default) — log a warning and allow scraping.
+        * ``False`` — log an error and raise :exc:`RobotsTxtError`.
 
         Raises:
-            RobotsTxtError: Never raised - errors are logged as warnings
+            RobotsTxtError: If robots.txt cannot be fetched *and*
+                ``robots_txt_fail_open`` is ``False``.
         """
+        if self._robots_loaded:
+            return
+        self._robots_loaded = True  # set before fetch to avoid retry loops
+
         robots_url = urljoin(str(self.config.base_url), "/robots.txt")
-        logger.debug(f"Checking robots.txt at {robots_url}")
+        logger.debug(f"Fetching robots.txt from {robots_url}")
 
         try:
             self._robots_parser = RobotFileParser()
             self._robots_parser.set_url(robots_url)
             self._robots_parser.read()
             logger.info("Successfully parsed robots.txt")
-        except Exception as e:
-            logger.warning(f"Failed to parse robots.txt: {e}. Proceeding cautiously.")
-            # Don't raise - allow scraping but log the issue
+        except Exception as exc:
+            self._robots_parser = None
+            if self.config.robots_txt_fail_open:
+                logger.warning(
+                    f"Failed to fetch robots.txt: {exc}. "
+                    "Proceeding (robots_txt_fail_open=True)."
+                )
+            else:
+                logger.error(
+                    f"Failed to fetch robots.txt: {exc}. "
+                    "Blocking all requests (robots_txt_fail_open=False)."
+                )
+                raise RobotsTxtError(
+                    f"robots.txt unavailable and fail_open=False: {exc}",
+                    url=robots_url,
+                ) from exc
 
     def _can_fetch(self, url: str) -> bool:
         """Check if URL can be fetched according to robots.txt.
 
+        Lazily loads robots.txt on first call when ``respect_robots_txt`` is
+        enabled.
+
         Args:
-            url: The URL to check
+            url: The URL to check.
 
         Returns:
-            True if fetching is allowed, False otherwise
+            ``True`` if fetching is allowed.
 
         Raises:
-            RobotsTxtError: If robots.txt explicitly disallows the URL
+            RobotsTxtError: If robots.txt disallows *url*, or if robots.txt is
+                unavailable and ``robots_txt_fail_open=False``.
 
         Example:
             >>> fetcher._can_fetch("https://ddowiki.com/page/Item:Sword")
             True
-            >>> fetcher._can_fetch("https://ddowiki.com/admin/secret")
-            RobotsTxtError: Fetching ... is disallowed by robots.txt
         """
-        if not self.config.respect_robots_txt or self._robots_parser is None:
+        if not self.config.respect_robots_txt:
+            return True
+
+        self._ensure_robots_loaded()
+
+        if self._robots_parser is None:
+            # Load failed but fail_open=True — allow
             return True
 
         user_agent = self.config.user_agent
-        can_fetch = self._robots_parser.can_fetch(user_agent, url)
-
-        if not can_fetch:
+        if not self._robots_parser.can_fetch(user_agent, url):
             logger.error(f"robots.txt disallows fetching: {url}")
             raise RobotsTxtError(f"Fetching {url} is disallowed by robots.txt", url=url)
 

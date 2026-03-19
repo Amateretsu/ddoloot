@@ -279,13 +279,36 @@ class ItemNormalizer:
         except ValueError:
             return None
 
+    def _strategy_colon(self, raw: str) -> Optional[Enchantment]:
+        """Strategy 1: colon separator, e.g. ``"Resistance: +5"``."""
+        if ": " not in raw:
+            return None
+        name, _, value_str = raw.partition(": ")
+        return Enchantment(
+            name=name.strip(), value=self._suffix_to_int(value_str.strip())
+        )
+
+    def _strategy_suffix_regex(self, raw: str) -> Optional[Enchantment]:
+        """Strategy 2: trailing ``+N``/``-N`` or Roman-numeral suffix."""
+        match = _ENCHANT_SUFFIX_RE.match(raw)
+        if not match:
+            return None
+        name_part = match.group(1).strip()
+        suffix = match.group(2).strip()
+        # Validate Roman numerals against known set (avoids false matches on 'V' in names)
+        if suffix.lstrip("+-").isdigit() or suffix.upper() in _ROMAN:
+            return Enchantment(name=name_part, value=self._suffix_to_int(suffix))
+        return None
+
+    def _strategy_fallback(self, raw: str) -> Enchantment:
+        """Strategy 3 (fallback): entire string becomes the name."""
+        return Enchantment(name=raw, value=None)
+
     def _parse_enchantments(self, raw_list: list) -> list[Enchantment]:
         """Convert a list of raw enchantment strings to Enchantment models.
 
-        Three strategies are tried in order for each string:
-          1. If ': ' is present → split on the first ': '
-          2. Regex match for a trailing '+N'/'-N' or Roman numeral
-          3. Entire string becomes name with value=None
+        Strategies are tried in order for each string; the first non-``None``
+        result wins.  If all strategies return ``None``, the fallback is used.
 
         Args:
             raw_list: List of raw enchantment text strings from the parser
@@ -296,40 +319,21 @@ class ItemNormalizer:
         Example:
             >>> normalizer._parse_enchantments(["Resistance +5", "Superior Devotion VI"])
             [Enchantment(name='Resistance', value=5),
-             Enchantment(name='Metalline', value=None),
              Enchantment(name='Superior Devotion', value=6)]
         """
+        strategies = [self._strategy_colon, self._strategy_suffix_regex]
         result: list[Enchantment] = []
         for raw in raw_list:
             raw = raw.strip()
             if not raw:
                 continue
-
-            # Strategy 1: colon separator ("Resistance: +5")
-            if ": " in raw:
-                name, _, value_str = raw.partition(": ")
-                result.append(
-                    Enchantment(
-                        name=name.strip(), value=self._suffix_to_int(value_str.strip())
-                    )
-                )
-                continue
-
-            # Strategy 2: trailing numeric or Roman numeral suffix
-            match = _ENCHANT_SUFFIX_RE.match(raw)
-            if match:
-                name_part = match.group(1).strip()
-                suffix = match.group(2).strip()
-                # Validate Roman numerals against known set (avoids false matches on 'V' in names)
-                if suffix.lstrip("+-").isdigit() or suffix.upper() in _ROMAN:
-                    result.append(
-                        Enchantment(name=name_part, value=self._suffix_to_int(suffix))
-                    )
-                    continue
-
-            # Strategy 3: whole string is the name
-            result.append(Enchantment(name=raw, value=None))
-
+            for strategy in strategies:
+                enchantment = strategy(raw)
+                if enchantment is not None:
+                    result.append(enchantment)
+                    break
+            else:
+                result.append(self._strategy_fallback(raw))
         return result
 
     # ------------------------------------------------------------------

@@ -6,9 +6,11 @@ thread safety, and utility methods.
 
 import asyncio
 import time
+from unittest.mock import patch
 
 import pytest
 
+from ddowiki_scraper.exceptions import RateLimitError
 from ddowiki_scraper.rate_limiter import RateLimiter
 
 
@@ -267,3 +269,23 @@ class TestRateLimiterEdgeCases:
 
         assert limiter.is_ready()
         assert limiter.get_time_until_ready() == 0.0
+
+
+class TestRateLimiterErrorHandling:
+    """Test error handling paths in wait_sync and wait_async."""
+
+    def test_wait_sync_raises_rate_limit_error_on_exception(self) -> None:
+        """Test that wait_sync raises RateLimitError when time.time raises."""
+        limiter = RateLimiter(delay=1.0)
+
+        with patch("time.time", side_effect=Exception("time error")):
+            with pytest.raises(RateLimitError):
+                limiter.wait_sync()
+
+    async def test_wait_async_raises_rate_limit_error_on_exception(self) -> None:
+        """Test that wait_async raises RateLimitError when time.time raises."""
+        limiter = RateLimiter(delay=1.0)
+
+        with patch("time.time", side_effect=Exception("time error")):
+            with pytest.raises(RateLimitError):
+                await limiter.wait_async()

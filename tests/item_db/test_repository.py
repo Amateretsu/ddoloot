@@ -1,9 +1,13 @@
 """Tests for ItemRepository — save, upsert, get, delete, search, and helpers."""
 
+import sqlite3
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from item_db import ItemFilter, ItemRepository
-from item_db.exceptions import DuplicateItemError, ItemNotFoundError
+from item_db._writer import _ItemWriter
+from item_db.exceptions import DuplicateItemError, ItemDbError, ItemNotFoundError, SchemaError
 from item_normalizer.models import DDOItem, Enchantment
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────
@@ -130,9 +134,9 @@ class TestSaveMany:
     def test_save_many_all_success(
         self, repo: ItemRepository, cloak_item: DDOItem, weapon_item: DDOItem
     ) -> None:
-        saved, errors = repo.save_many([cloak_item, weapon_item])
+        saved, failures = repo.save_many([cloak_item, weapon_item])
         assert saved == 2
-        assert errors == 0
+        assert failures == []
         assert repo.count() == 2
 
     def test_save_many_partial_failure(
@@ -140,8 +144,10 @@ class TestSaveMany:
     ) -> None:
         repo.save(cloak_item)
         # Second save of same item upserts (succeeds), so use save_many with non-DDOItem
-        _saved, errors = repo.save_many([cloak_item, "bad"])  # type: ignore[list-item]
-        assert errors == 1
+        _saved, failures = repo.save_many([cloak_item, "bad"])  # type: ignore[list-item]
+        assert len(failures) == 1
+        assert failures[0][0] == "bad"
+        assert isinstance(failures[0][1], TypeError)
 
 
 # ── Get ──────────────────────────────────────────────────────────────────────
@@ -533,3 +539,200 @@ class TestFinders:
         repo.save(weapon_item)
         names = repo.find_by_quest("Pit")
         assert weapon_item.name in names
+
+
+# ── SchemaError on open failure ───────────────────────────────────────────────
+
+
+class TestSchemaError:
+    def test_schema_error_on_connect_failure(self) -> None:
+        repo = ItemRepository(":memory:")
+        with patch("sqlite3.connect", side_effect=sqlite3.Error("disk I/O error")):
+            with pytest.raises(SchemaError):
+                repo.open()
+
+    def test_conn_is_none_after_schema_error(self) -> None:
+        repo = ItemRepository(":memory:")
+        with patch("sqlite3.connect", side_effect=sqlite3.Error("boom")):
+            try:
+                repo.open()
+            except SchemaError:
+                pass
+        assert repo._conn is None
+
+
+# ── delete_by_id ──────────────────────────────────────────────────────────────
+
+
+class TestDeleteById:
+    def test_delete_by_id_removes_item(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
+        item_id = repo.save(cloak_item)
+        repo.delete_by_id(item_id)
+        assert not repo.exists(cloak_item.name)
+
+    def test_delete_by_id_missing_raises(self, repo: ItemRepository) -> None:
+        with pytest.raises(ItemNotFoundError):
+            repo.delete_by_id(9999)
+
+    def test_delete_by_id_count_decrements(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
+        item_id = repo.save(cloak_item)
+        assert repo.count() == 1
+        repo.delete_by_id(item_id)
+        assert repo.count() == 0
+
+
+# ── DB-level errors (sqlite3.Error paths) ────────────────────────────────────
+
+
+class TestDbErrors:
+    """Each method must raise ItemDbError when the underlying sqlite3 call fails."""
+
+    def _mock_conn(self) -> MagicMock:
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = sqlite3.Error("simulated db error")
+        mock_conn.executemany.side_effect = sqlite3.Error("simulated db error")
+        return mock_conn
+
+    def test_get_or_none_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.get_or_none("any")
+
+    def test_get_by_id_raises_not_found(self, repo: ItemRepository) -> None:
+        with pytest.raises(ItemNotFoundError):
+            repo.get_by_id(9999)
+
+    def test_get_by_id_or_none_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.get_by_id_or_none(1)
+
+    def test_get_id_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.get_id("any")
+
+    def test_list_names_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.list_names()
+
+    def test_count_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.count()
+
+    def test_exists_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.exists("any")
+
+    def test_search_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.search(ItemFilter())
+
+    def test_find_by_enchantment_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.find_by_enchantment("Vorpal")
+
+    def test_find_by_set_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.find_by_set("Some Set")
+
+    def test_find_by_quest_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.find_by_quest("Some Quest")
+
+    def test_get_scraped_at_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = self._mock_conn()
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.get_scraped_at("any")
+
+    def test_upsert_db_error(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
+        mock_conn = MagicMock()
+        # Make conn act as a context manager but raise on execute inside write
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.execute.side_effect = sqlite3.Error("upsert error")
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.upsert(cloak_item)
+
+    def test_delete_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.execute.side_effect = sqlite3.Error("delete error")
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.delete("any name")
+
+    def test_delete_by_id_db_error(self, repo: ItemRepository) -> None:
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.execute.side_effect = sqlite3.Error("delete by id error")
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.delete_by_id(42)
+
+    def test_save_non_unique_integrity_error(
+        self, repo: ItemRepository, cloak_item: DDOItem
+    ) -> None:
+        """A non-UNIQUE IntegrityError in save() raises ItemDbError, not DuplicateItemError."""
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with patch.object(
+                _ItemWriter,
+                "write",
+                side_effect=sqlite3.IntegrityError("FOREIGN KEY constraint failed"),
+            ):
+                with pytest.raises(ItemDbError) as exc_info:
+                    repo.save(cloak_item)
+                # Must NOT be DuplicateItemError
+                assert not isinstance(exc_info.value, DuplicateItemError)
+
+    def test_close_commit_error_is_swallowed(self, repo: ItemRepository) -> None:
+        """sqlite3.Error raised during commit() in close() is silently swallowed."""
+        # Ensure the repo has an open connection first.
+        repo.open()
+        mock_conn = MagicMock()
+        mock_conn.commit.side_effect = sqlite3.Error("commit failed")
+        repo._conn = mock_conn
+        # Must not raise even though commit() fails.
+        repo.close()
+        assert repo._conn is None
+
+    def test_save_db_error(self, repo: ItemRepository, cloak_item: DDOItem) -> None:
+        """A bare sqlite3.Error (not IntegrityError) in save() raises ItemDbError."""
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        mock_conn.execute.side_effect = sqlite3.Error("db error")
+        mock_conn.executemany.side_effect = sqlite3.Error("db error")
+
+        with patch.object(repo, "_get_conn", return_value=mock_conn):
+            with pytest.raises(ItemDbError):
+                repo.save(cloak_item)

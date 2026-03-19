@@ -46,25 +46,43 @@ from ddo_sync.models import (
     UpdatePageStatus,
 )
 from ddo_sync.page_discovery import UpdatePageDiscoverer
+from ddo_sync.protocols import (
+    FetcherProtocol,
+    ItemRepositoryProtocol,
+    NormalizerProtocol,
+    QueueRepositoryProtocol,
+    UpdatePageParserProtocol,
+    WikiApiClientProtocol,
+)
 from ddo_sync.queue_db import QueueRepository
+from ddo_sync.scrape_queue_db import ScrapeQueueRepository
 from ddo_sync.syncer import DDOSyncer
+from ddo_sync.update_page_db import UpdatePageRepository
 from ddo_sync.update_page_parser import UpdatePageParser
 from ddo_sync.wiki_api import WikiApiClient
 
 __all__ = [
     "DDOSyncError",
     "DDOSyncer",
+    "FetcherProtocol",
     "ItemLink",
+    "ItemRepositoryProtocol",
+    "NormalizerProtocol",
     "QueueDbError",
     "QueueItem",
     "QueueRepository",
+    "QueueRepositoryProtocol",
     "QueueSchemaError",
     "QueueStats",
+    "ScrapeQueueRepository",
     "SyncStatus",
     "UpdatePageDiscoverer",
     "UpdatePageError",
     "UpdatePageParser",
+    "UpdatePageParserProtocol",
+    "UpdatePageRepository",
     "UpdatePageStatus",
     "WikiApiClient",
+    "WikiApiClientProtocol",
     "WikiApiError",
 ]

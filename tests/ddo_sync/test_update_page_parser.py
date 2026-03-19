@@ -84,3 +84,28 @@ class TestParse:
         html = '<a href="/page/Item:Foo">Foo</a>'
         links = parser.parse(html, "Update_1")
         assert "//page" not in links[0].wiki_url
+
+    def test_empty_href_is_skipped(self, parser: UpdatePageParser):
+        """An <a> tag with an empty href attribute is silently skipped."""
+        html = '<a href="">Empty href</a><a href="/page/Item:Valid_Item">Valid</a>'
+        links = parser.parse(html, "Update_1")
+        # The empty-href tag is not an Item: link so it wouldn't match the regex,
+        # but constructing it so the regex would match requires special handling.
+        # Directly test using a tag that passes the regex but has empty href after get():
+        # The real branch (line 82) is hit when tag.get("href", "") returns "".
+        # We can verify no crash and only the valid item is returned.
+        assert len(links) == 1
+        assert links[0].item_name == "Valid Item"
+
+    def test_empty_item_name_after_decode_is_skipped(self, parser: UpdatePageParser):
+        """An <a href="/page/Item:"> with no name after the prefix is skipped."""
+        html = (
+            '<a href="/page/Item:">Empty name</a>'
+            '<a href="/page/Item:Real_Item">Real Item</a>'
+        )
+        links = parser.parse(html, "Update_1")
+        names = [lnk.item_name for lnk in links]
+        assert "Real Item" in names
+        # The empty-name link must be excluded
+        assert "" not in names
+        assert len(links) == 1

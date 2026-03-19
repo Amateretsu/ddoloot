@@ -23,12 +23,16 @@ from loguru import logger
 
 from ddo_sync.exceptions import UpdatePageError
 from ddo_sync.models import ItemLink, SyncStatus
-from ddo_sync.queue_db import QueueRepository
+from ddo_sync.protocols import (
+    FetcherProtocol,
+    ItemRepositoryProtocol,
+    NormalizerProtocol,
+    QueueRepositoryProtocol,
+    UpdatePageParserProtocol,
+    WikiApiClientProtocol,
+)
 from ddo_sync.update_page_parser import UpdatePageParser
 from ddo_sync.wiki_api import WikiApiClient
-from ddowiki_scraper.fetcher import WikiFetcher
-from item_db.repository import ItemRepository
-from item_normalizer.normalizer import ItemNormalizer
 
 _BASE_URL = "https://ddowiki.com"
 _PAGE_PREFIX = f"{_BASE_URL}/page/"
@@ -37,18 +41,21 @@ _PAGE_PREFIX = f"{_BASE_URL}/page/"
 class DDOSyncer:
     """Orchestrates the full DDO item sync pipeline.
 
-    Dependencies are injected so callers control lifecycle (context managers,
-    session reuse, in-memory testing). :class:`WikiApiClient` and
-    :class:`UpdatePageParser` are owned internally — they have no external
-    state the caller needs to manage.
+    All dependencies are injected so callers control lifecycle (context
+    managers, session reuse, in-memory testing).  ``api_client`` and
+    ``parser`` default to the standard implementations when omitted.
 
     Args:
-        fetcher:     Configured :class:`WikiFetcher` instance.
-        normalizer:  :class:`ItemNormalizer` instance.
-        item_repo:   Open :class:`ItemRepository` instance.
-        queue_repo:  Open :class:`QueueRepository` instance.
+        fetcher:     Object satisfying :class:`~ddo_sync.protocols.FetcherProtocol`.
+        normalizer:  Object satisfying :class:`~ddo_sync.protocols.NormalizerProtocol`.
+        item_repo:   Object satisfying :class:`~ddo_sync.protocols.ItemRepositoryProtocol`.
+        queue_repo:  Object satisfying :class:`~ddo_sync.protocols.QueueRepositoryProtocol`.
         max_retries: Items that have failed this many times are not reset to
                      pending on the next cycle (default: 3).
+        api_client:  Optional :class:`~ddo_sync.protocols.WikiApiClientProtocol`.
+                     Defaults to :class:`~ddo_sync.wiki_api.WikiApiClient`.
+        parser:      Optional :class:`~ddo_sync.protocols.UpdatePageParserProtocol`.
+                     Defaults to :class:`~ddo_sync.update_page_parser.UpdatePageParser`.
 
     Example:
         >>> syncer = DDOSyncer(fetcher, normalizer, item_repo, queue_repo)
@@ -58,19 +65,23 @@ class DDOSyncer:
 
     def __init__(
         self,
-        fetcher: WikiFetcher,
-        normalizer: ItemNormalizer,
-        item_repo: ItemRepository,
-        queue_repo: QueueRepository,
+        fetcher: FetcherProtocol,
+        normalizer: NormalizerProtocol,
+        item_repo: ItemRepositoryProtocol,
+        queue_repo: QueueRepositoryProtocol,
         max_retries: int = 3,
+        api_client: Optional[WikiApiClientProtocol] = None,
+        parser: Optional[UpdatePageParserProtocol] = None,
     ) -> None:
         self._fetcher = fetcher
         self._normalizer = normalizer
         self._item_repo = item_repo
         self._queue_repo = queue_repo
         self._max_retries = max_retries
-        self._api_client = WikiApiClient()
-        self._parser = UpdatePageParser(base_url=_BASE_URL)
+        self._api_client: WikiApiClientProtocol = api_client or WikiApiClient()
+        self._parser: UpdatePageParserProtocol = parser or UpdatePageParser(
+            base_url=_BASE_URL
+        )
 
     # ── Registration ─────────────────────────────────────────────────────────
 
@@ -217,13 +228,24 @@ class DDOSyncer:
                 html = self._fetcher.fetch_url(queue_item.wiki_url)
                 ddo_item = self._normalizer.normalize(html, queue_item.wiki_url)
                 self._item_repo.upsert(ddo_item)
-                self._queue_repo.mark_complete(queue_item.id, _utcnow())
-                logger.debug(f"Completed: {queue_item.item_name!r}")
-                success += 1
             except Exception as exc:
                 error_msg = f"{type(exc).__name__}: {exc}"
                 self._queue_repo.mark_failed(queue_item.id, _utcnow(), error_msg)
                 logger.warning(f"Failed: {queue_item.item_name!r} — {error_msg}")
+                failures += 1
+                continue
+            try:
+                self._queue_repo.mark_complete(queue_item.id, _utcnow())
+                logger.debug(f"Completed: {queue_item.item_name!r}")
+                success += 1
+            except Exception as exc:
+                # Persistence of the item succeeded; best-effort failure record.
+                error_msg = f"{type(exc).__name__}: {exc}"
+                logger.error(
+                    f"Item {queue_item.item_name!r} saved but mark_complete failed: "
+                    f"{error_msg}"
+                )
+                self._queue_repo.mark_failed(queue_item.id, _utcnow(), error_msg)
                 failures += 1
 
         logger.info(f"Queue cycle complete: {success} success, {failures} failed")

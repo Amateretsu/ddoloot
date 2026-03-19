@@ -1,15 +1,19 @@
-"""SQLite-backed scrape queue and update page sync state.
+"""SQLite-backed repository for the scrape queue.
 
-Follows the same connection lifecycle pattern as item_db.ItemRepository:
-lazy open, context manager, explicit transactions, row_factory = sqlite3.Row.
+Manages individual item rows in ``scrape_queue``, tracking status transitions
+from ``pending`` through ``in_progress`` to ``complete``, ``failed``, or
+``skipped``.  The ``update_pages`` table is also created (via
+:data:`~ddo_sync.schema.QUEUE_SCHEMA_SQL`) because ``scrape_queue`` carries a
+foreign-key reference to it — both tables must live in the same file.
 
 Example:
-    >>> from ddo_sync.queue_db import QueueRepository
-    >>> with QueueRepository(":memory:") as qr:
-    ...     qr.register_update_page("Update_5_named_items",
-                "https://ddowiki.com/page/Update_5_named_items")
-    ...     qr.enqueue_items(links)
-    ...     items = qr.get_pending_items(limit=10)
+    >>> from ddo_sync.scrape_queue_db import ScrapeQueueRepository
+    >>> from ddo_sync.models import ItemLink
+    >>> with ScrapeQueueRepository(":memory:") as repo:
+    ...     links = [ItemLink("Sword of Shadow",
+    ...                       "https://ddowiki.com/page/Item:Sword_of_Shadow",
+    ...                       "Update_5_named_items")]
+    ...     repo.enqueue_items(links)
 """
 
 from __future__ import annotations
@@ -21,41 +25,44 @@ from typing import Any, List, Optional, Tuple
 from loguru import logger
 
 from ddo_sync.exceptions import QueueDbError, QueueSchemaError
-from ddo_sync.models import ItemLink, QueueItem, QueueStats, UpdatePageStatus
+from ddo_sync.models import ItemLink, QueueItem, QueueStats
 from ddo_sync.schema import QUEUE_SCHEMA_SQL
 
-_VALID_STATUSES = frozenset({"pending", "in_progress", "complete", "failed", "skipped"})
 
+class ScrapeQueueRepository:
+    """SQLite-backed persistence for the scrape queue.
 
-class QueueRepository:
-    """SQLite-backed persistence for the scrape queue and update page sync state.
+    Each instance manages ``pending → in_progress → complete | failed | skipped``
+    status transitions for individual item rows.  The ``update_pages`` table is
+    created automatically (idempotent) because ``scrape_queue`` references it
+    via a foreign key.
 
     Args:
-        db_path: Path to the SQLite file. Pass ``":memory:"`` for tests.
+        db_path: Path to the SQLite file.  Pass ``\":memory:\"`` for tests.
 
     Example:
-        >>> with QueueRepository("queue.db") as qr:
-        ...     qr.register_update_page("Update_5_named_items", page_url)
-        ...     qr.enqueue_items(links)
+        >>> with ScrapeQueueRepository("queue.db") as repo:
+        ...     inserted = repo.enqueue_items(links)
+        ...     pending = repo.get_pending_items(limit=10)
     """
 
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
         self._conn: Optional[sqlite3.Connection] = None
 
-    # ── Context manager ──────────────────────────────────────────────────────
+    # ── Context manager ───────────────────────────────────────────────────────
 
-    def __enter__(self) -> QueueRepository:
+    def __enter__(self) -> ScrapeQueueRepository:
         self.open()
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.close()
 
-    # ── Lifecycle ────────────────────────────────────────────────────────────
+    # ── Lifecycle ─────────────────────────────────────────────────────────────
 
     def open(self) -> None:
-        """Open the connection and initialize the schema. Idempotent."""
+        """Open the connection and initialise the schema.  Idempotent."""
         if self._conn is not None:
             return
         try:
@@ -64,13 +71,15 @@ class QueueRepository:
             self._conn.execute("PRAGMA foreign_keys = ON")
             self._conn.executescript(QUEUE_SCHEMA_SQL)
             self._conn.commit()
-            logger.debug(f"queue_db opened: {self._db_path!r}")
+            logger.debug(f"scrape_queue_db opened: {self._db_path!r}")
         except sqlite3.Error as exc:
             self._conn = None
-            raise QueueSchemaError(f"Failed to initialize queue schema: {exc}") from exc
+            raise QueueSchemaError(
+                f"Failed to initialise scrape_queue schema: {exc}"
+            ) from exc
 
     def close(self) -> None:
-        """Commit and close the connection. Idempotent."""
+        """Commit and close the connection.  Idempotent."""
         if self._conn is None:
             return
         try:
@@ -80,126 +89,25 @@ class QueueRepository:
         finally:
             self._conn.close()
             self._conn = None
-            logger.debug(f"queue_db closed: {self._db_path!r}")
+            logger.debug(f"scrape_queue_db closed: {self._db_path!r}")
 
-    # ── Update page management ───────────────────────────────────────────────
-
-    def register_update_page(self, page_name: str, page_url: str) -> None:
-        """Insert a new update page row, or do nothing if it already exists.
-
-        Args:
-            page_name: Natural key, e.g. ``"Update_5_named_items"``.
-            page_url:  Full URL of the update page.
-
-        Raises:
-            QueueDbError: On SQLite error.
-        """
-        try:
-            with self._get_conn() as conn:
-                conn.execute(
-                    "INSERT OR IGNORE INTO update_pages (page_name, page_url) VALUES (?, ?)",
-                    (page_name, page_url),
-                )
-            logger.debug(f"Registered update page: {page_name!r}")
-        except sqlite3.Error as exc:
-            raise QueueDbError(
-                f"Failed to register update page {page_name!r}: {exc}"
-            ) from exc
-
-    def mark_page_synced(self, page_name: str, synced_at: datetime) -> None:
-        """Record when item links were last successfully parsed from the page.
-
-        Args:
-            page_name: Natural key.
-            synced_at: UTC datetime to record.
-        """
-        try:
-            with self._get_conn() as conn:
-                conn.execute(
-                    "UPDATE update_pages SET last_synced_at = ? WHERE page_name = ?",
-                    (_iso(synced_at), page_name),
-                )
-        except sqlite3.Error as exc:
-            raise QueueDbError(
-                f"Failed to mark page synced {page_name!r}: {exc}"
-            ) from exc
-
-    def set_wiki_modified_at(
-        self, page_name: str, modified_at: Optional[datetime]
-    ) -> None:
-        """Store the ``wiki_modified_at`` timestamp fetched from the MediaWiki API.
-
-        Args:
-            page_name:   Natural key.
-            modified_at: UTC datetime from the API, or ``None`` if the page
-                         was not found on the wiki.
-        """
-        try:
-            with self._get_conn() as conn:
-                conn.execute(
-                    "UPDATE update_pages SET wiki_modified_at = ? WHERE page_name = ?",
-                    (_iso(modified_at) if modified_at else None, page_name),
-                )
-        except sqlite3.Error as exc:
-            raise QueueDbError(
-                f"Failed to set wiki_modified_at for {page_name!r}: {exc}"
-            ) from exc
-
-    def get_update_page_status(self, page_name: str) -> Optional[UpdatePageStatus]:
-        """Return the sync state for one tracked page, or ``None`` if not registered.
-
-        Args:
-            page_name: Natural key.
-
-        Returns:
-            :class:`UpdatePageStatus` with ``needs_resync`` computed, or ``None``.
-        """
-        try:
-            row = (
-                self._get_conn()
-                .execute("SELECT * FROM update_pages WHERE page_name = ?", (page_name,))
-                .fetchone()
-            )
-            return _row_to_update_page_status(row) if row else None
-        except sqlite3.Error as exc:
-            raise QueueDbError(
-                f"Failed to get update page status for {page_name!r}: {exc}"
-            ) from exc
-
-    def list_update_pages(self) -> List[UpdatePageStatus]:
-        """Return :class:`UpdatePageStatus` for every registered update page."""
-        try:
-            rows = (
-                self._get_conn()
-                .execute("SELECT * FROM update_pages ORDER BY page_name")
-                .fetchall()
-            )
-            return [_row_to_update_page_status(r) for r in rows]
-        except sqlite3.Error as exc:
-            raise QueueDbError(f"Failed to list update pages: {exc}") from exc
-
-    # ── Queue writes ─────────────────────────────────────────────────────────
+    # ── Writes ────────────────────────────────────────────────────────────────
 
     def enqueue_items(self, links: List[ItemLink]) -> int:
         """Add items to the scrape queue, skipping already-queued duplicates.
 
         Uses ``INSERT OR IGNORE`` against the ``UNIQUE (item_name, update_page)``
-        constraint. Items already in the queue for that update page are silently
+        constraint.  Items already in the queue for that update page are silently
         skipped regardless of their current status.
 
         Args:
-            links: :class:`ItemLink` objects to enqueue.
+            links: :class:`~ddo_sync.models.ItemLink` objects to enqueue.
 
         Returns:
             Number of rows actually inserted.
 
         Raises:
             QueueDbError: On SQLite error.
-
-        Example:
-            >>> inserted = qr.enqueue_items(links)
-            >>> inserted
-            12
         """
         now = _iso(_utcnow())
         inserted = 0
@@ -224,17 +132,17 @@ class QueueRepository:
             raise QueueDbError(f"Failed to enqueue items: {exc}") from exc
 
     def mark_in_progress(self, item_id: int, started_at: datetime) -> None:
-        """Transition an item from pending to in_progress."""
+        """Transition an item from ``pending`` to ``in_progress``."""
         self._update_status(item_id, "in_progress", started_at=_iso(started_at))
 
     def mark_complete(self, item_id: int, completed_at: datetime) -> None:
-        """Transition an item to complete status."""
+        """Transition an item to ``complete`` status."""
         self._update_status(item_id, "complete", completed_at=_iso(completed_at))
 
     def mark_failed(
         self, item_id: int, completed_at: datetime, error_message: str
     ) -> None:
-        """Record a failure and increment retry_count. Status becomes ``"failed"``."""
+        """Record a failure and increment ``retry_count``.  Status → ``\"failed\"``."""
         try:
             with self._get_conn() as conn:
                 conn.execute(
@@ -254,11 +162,11 @@ class QueueRepository:
             ) from exc
 
     def mark_skipped(self, item_id: int) -> None:
-        """Set an item's status to skipped. No retry will be attempted."""
+        """Set an item's status to ``skipped``.  No retry will be attempted."""
         self._update_status(item_id, "skipped")
 
     def reset_failed_to_pending(self, max_retries: int) -> int:
-        """Reset failed items with retry_count < max_retries back to pending.
+        """Reset failed items with ``retry_count < max_retries`` back to pending.
 
         Called at the start of each processing cycle so recoverable failures
         (e.g. transient network errors) are retried automatically.
@@ -288,16 +196,16 @@ class QueueRepository:
         except sqlite3.Error as exc:
             raise QueueDbError(f"Failed to reset failed items: {exc}") from exc
 
-    # ── Queue reads ──────────────────────────────────────────────────────────
+    # ── Reads ─────────────────────────────────────────────────────────────────
 
     def get_pending_items(self, limit: Optional[int] = None) -> List[QueueItem]:
         """Return pending items ordered by ``queued_at`` ascending (oldest first).
 
         Args:
-            limit: Maximum number of rows to return. ``None`` means all pending.
+            limit: Maximum number of rows to return.  ``None`` means all pending.
 
         Returns:
-            List of :class:`QueueItem` in FIFO order.
+            List of :class:`~ddo_sync.models.QueueItem` in FIFO order.
         """
         sql = "SELECT * FROM scrape_queue WHERE status = 'pending' ORDER BY queued_at"
         params: Tuple = ()
@@ -314,7 +222,7 @@ class QueueRepository:
         """Return aggregate counts by status across the entire queue.
 
         Returns:
-            :class:`QueueStats` with counts for each status.
+            :class:`~ddo_sync.models.QueueStats` with counts for each status.
         """
         try:
             rows = (
@@ -342,7 +250,7 @@ class QueueRepository:
             page_name: Natural key of the update page.
 
         Returns:
-            List of :class:`QueueItem`, ordered by ``queued_at``.
+            List of :class:`~ddo_sync.models.QueueItem`, ordered by ``queued_at``.
         """
         try:
             rows = (
@@ -359,7 +267,7 @@ class QueueRepository:
                 f"Failed to get items for update page {page_name!r}: {exc}"
             ) from exc
 
-    # ── Internal helpers ─────────────────────────────────────────────────────
+    # ── Internal ──────────────────────────────────────────────────────────────
 
     def _get_conn(self) -> sqlite3.Connection:
         if self._conn is None:
@@ -391,7 +299,7 @@ class QueueRepository:
             ) from exc
 
 
-# ── Module-level helpers ─────────────────────────────────────────────────────
+# ── Module-level helpers ──────────────────────────────────────────────────────
 
 
 def _utcnow() -> datetime:
@@ -406,15 +314,6 @@ def _parse_iso(s: Optional[str]) -> Optional[datetime]:
     if s is None:
         return None
     return datetime.fromisoformat(s)
-
-
-def _row_to_update_page_status(row: sqlite3.Row) -> UpdatePageStatus:
-    return UpdatePageStatus(
-        page_name=row["page_name"],
-        page_url=row["page_url"],
-        last_synced_at=_parse_iso(row["last_synced_at"]),
-        wiki_modified_at=_parse_iso(row["wiki_modified_at"]),
-    )
 
 
 def _row_to_queue_item(row: sqlite3.Row) -> QueueItem:

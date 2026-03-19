@@ -22,6 +22,7 @@ from item_db.exceptions import (
     ItemNotFoundError,
     SchemaError,
 )
+from item_db.protocols import ItemRepositoryProtocol
 from item_db.repository import ItemRepository
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     "ItemFilter",
     "ItemNotFoundError",
     "ItemRepository",
+    "ItemRepositoryProtocol",
     "SchemaError",
 ]

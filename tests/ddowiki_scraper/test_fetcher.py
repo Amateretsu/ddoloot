@@ -93,15 +93,19 @@ class TestWikiFetcher:
     def test_robots_txt_check_enabled(
         self, mock_parser_class: Mock, default_config: WikiFetcherConfig  # noqa: ARG002
     ) -> None:
-        """Test that robots.txt is checked when enabled."""
+        """Test that robots.txt is loaded lazily on the first _can_fetch call."""
         config = WikiFetcherConfig(
             base_url="https://ddowiki.com", respect_robots_txt=True
         )
 
         mock_parser = Mock()
+        mock_parser.can_fetch.return_value = True
         mock_parser_class.return_value = mock_parser
 
-        WikiFetcher(config)
+        fetcher = WikiFetcher(config)
+        # robots.txt not yet loaded — triggered on first _can_fetch call
+        assert not fetcher._robots_loaded
+        fetcher._can_fetch("https://ddowiki.com/page/Item:Test")
 
         mock_parser.set_url.assert_called_once()
         mock_parser.read.assert_called_once()
@@ -479,3 +483,108 @@ class TestWikiFetcherRetries:
 
         # stop_after_attempt(3) in the @retry decorator means 3 total attempts
         assert mock_get.call_count == 3
+
+
+class TestWikiFetcherRobotsErrors:
+    """Test robots.txt error handling paths."""
+
+    @patch("ddowiki_scraper.fetcher.RobotFileParser")
+    def test_robots_txt_fail_closed_raises_robots_txt_error(
+        self, mock_parser_class: Mock
+    ) -> None:
+        """Test that RobotsTxtError is raised when robots.txt fails and fail_open=False."""
+        config = WikiFetcherConfig(
+            base_url="https://ddowiki.com",
+            respect_robots_txt=True,
+            robots_txt_fail_open=False,
+        )
+
+        mock_parser = Mock()
+        mock_parser.read.side_effect = IOError("network error")
+        mock_parser_class.return_value = mock_parser
+
+        fetcher = WikiFetcher(config)
+
+        with pytest.raises(RobotsTxtError):
+            fetcher._can_fetch("https://ddowiki.com/page/Item:Sword")
+
+    @patch("ddowiki_scraper.fetcher.RobotFileParser")
+    def test_robots_txt_fail_open_returns_true(
+        self, mock_parser_class: Mock
+    ) -> None:
+        """Test that _can_fetch returns True when robots.txt fails and fail_open=True."""
+        config = WikiFetcherConfig(
+            base_url="https://ddowiki.com",
+            respect_robots_txt=True,
+            robots_txt_fail_open=True,
+        )
+
+        mock_parser = Mock()
+        mock_parser.read.side_effect = IOError("network error")
+        mock_parser_class.return_value = mock_parser
+
+        fetcher = WikiFetcher(config)
+
+        result = fetcher._can_fetch("https://ddowiki.com/page/Item:Sword")
+        assert result is True
+
+
+class TestWikiFetcherSyncErrors:
+    """Test sync fetch error handling paths."""
+
+    @patch("ddowiki_scraper.fetcher.requests.Session.get")
+    def test_fetch_item_page_non_404_http_error(
+        self, mock_get: Mock, default_config: WikiFetcherConfig
+    ) -> None:
+        """Test that FetchError is raised for non-404 HTTP errors (e.g. 500)."""
+        mock_response = Mock()
+        mock_response.status_code = 500
+        http_error = requests.HTTPError(response=mock_response)
+        mock_response.raise_for_status.side_effect = http_error
+        mock_get.return_value = mock_response
+
+        mock_rate_limiter = Mock()
+        mock_rate_limiter.wait_sync = Mock()
+        fetcher = WikiFetcher(default_config, rate_limiter=mock_rate_limiter)
+
+        with pytest.raises(FetchError):
+            fetcher.fetch_item_page("SomeItem")
+
+    def test_fetch_item_page_unexpected_exception_raises_fetch_error(
+        self, default_config: WikiFetcherConfig
+    ) -> None:
+        """Test that a generic Exception in _do_fetch_sync is wrapped in FetchError."""
+        mock_rate_limiter = Mock()
+        mock_rate_limiter.wait_sync = Mock()
+        fetcher = WikiFetcher(default_config, rate_limiter=mock_rate_limiter)
+
+        with patch.object(fetcher, "_do_fetch_sync", side_effect=Exception("unexpected")):
+            with pytest.raises(FetchError):
+                fetcher.fetch_item_page("SomeItem")
+
+    @patch("ddowiki_scraper.fetcher.requests.Session.get")
+    def test_fetch_url_request_exception_raises_fetch_error(
+        self, mock_get: Mock, default_config: WikiFetcherConfig
+    ) -> None:
+        """Test that requests.RequestException in fetch_url is wrapped in FetchError."""
+        mock_get.side_effect = requests.ConnectionError("conn refused")
+
+        mock_rate_limiter = Mock()
+        mock_rate_limiter.wait_sync = Mock()
+        fetcher = WikiFetcher(default_config, rate_limiter=mock_rate_limiter)
+
+        with pytest.raises(FetchError):
+            fetcher.fetch_url("https://ddowiki.com/page/Category:Items")
+
+
+class TestWikiFetcherContextManagerNullSession:
+    """Test the sync context manager __exit__ when session is None."""
+
+    def test_exit_with_no_session_does_not_raise(
+        self, default_config: WikiFetcherConfig
+    ) -> None:
+        """Test that __exit__ is a no-op when _session is None (never opened)."""
+        # Use context manager without making any requests — _session stays None
+        with WikiFetcher(default_config) as fetcher:
+            assert fetcher._session is None
+        # No assertion needed: reaching here means __exit__ did not raise
