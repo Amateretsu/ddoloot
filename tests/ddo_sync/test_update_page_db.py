@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import sqlite3
+from datetime import datetime
+from unittest.mock import MagicMock, patch
+
 import pytest
 
+from ddo_sync.exceptions import QueueDbError, QueueSchemaError
 from ddo_sync.models import UpdatePageStatus
-from ddo_sync.update_page_db import UpdatePageRepository
+from ddo_sync.update_page_db import UpdatePageRepository, _utcnow
 from tests.ddo_sync.conftest import (
     MODIFIED_AFTER,
     MODIFIED_BEFORE,
@@ -33,6 +38,15 @@ def repo() -> UpdatePageRepository:
 
 def _register(repo: UpdatePageRepository) -> None:
     repo.register(PAGE_NAME, PAGE_URL)
+
+
+def _make_error_conn() -> MagicMock:
+    """Return a MagicMock connection whose execute always raises sqlite3.Error."""
+    mock_conn = MagicMock(spec=sqlite3.Connection)
+    mock_conn.__enter__.return_value = mock_conn
+    mock_conn.__exit__.return_value = False
+    mock_conn.execute.side_effect = sqlite3.Error("db error")
+    return mock_conn
 
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -170,3 +184,53 @@ class TestListAll:
         pages = repo.list_all()
         assert pages[0].page_name == "Alpha_Page"
         assert pages[1].page_name == "Zebra_Page"
+
+
+# ── Exception paths ───────────────────────────────────────────────────────────
+
+
+class TestDbErrors:
+    def test_open_schema_error(self):
+        with patch(
+            "ddo_sync.update_page_db.sqlite3.connect",
+            side_effect=sqlite3.Error("disk full"),
+        ):
+            with pytest.raises(QueueSchemaError):
+                r = UpdatePageRepository(":memory:")
+                r.open()
+
+    def test_close_commit_error_is_swallowed(self, repo):
+        mock_conn = MagicMock(spec=sqlite3.Connection)
+        mock_conn.commit.side_effect = sqlite3.Error("disk full")
+        repo._conn = mock_conn
+        repo.close()  # Should not raise
+
+    def test_register_raises_queue_db_error(self, repo):
+        repo._conn = _make_error_conn()
+        with pytest.raises(QueueDbError):
+            repo.register(PAGE_NAME, PAGE_URL)
+
+    def test_mark_synced_raises_queue_db_error(self, repo):
+        repo._conn = _make_error_conn()
+        with pytest.raises(QueueDbError):
+            repo.mark_synced(PAGE_NAME, SYNCED_AT)
+
+    def test_set_wiki_modified_at_raises_queue_db_error(self, repo):
+        repo._conn = _make_error_conn()
+        with pytest.raises(QueueDbError):
+            repo.set_wiki_modified_at(PAGE_NAME, MODIFIED_AFTER)
+
+    def test_get_raises_queue_db_error(self, repo):
+        repo._conn = _make_error_conn()
+        with pytest.raises(QueueDbError):
+            repo.get(PAGE_NAME)
+
+    def test_list_all_raises_queue_db_error(self, repo):
+        repo._conn = _make_error_conn()
+        with pytest.raises(QueueDbError):
+            repo.list_all()
+
+    def test_utcnow_returns_datetime(self):
+        result = _utcnow()
+        assert isinstance(result, datetime)
+        assert result.tzinfo is not None

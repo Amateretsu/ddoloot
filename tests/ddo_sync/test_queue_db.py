@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import timezone
+from unittest.mock import MagicMock, patch
 
+import pytest
+
+from ddo_sync.exceptions import QueueDbError, QueueSchemaError
 from ddo_sync.models import ItemLink, QueueItem, QueueStats, UpdatePageStatus
 from ddo_sync.queue_db import QueueRepository
 from tests.ddo_sync.conftest import (
@@ -356,3 +361,130 @@ class TestGetItemsForUpdatePage:
         _register(queue_repo)
         items = queue_repo.get_items_for_update_page("Nonexistent_Page")
         assert items == []
+
+
+# ── Exception path tests ──────────────────────────────────────────────────────
+
+
+def _make_broken_conn() -> MagicMock:
+    """Return a MagicMock that mimics a sqlite3.Connection whose execute raises."""
+    mock_conn = MagicMock(spec=sqlite3.Connection)
+    mock_conn.execute.side_effect = sqlite3.Error("db error")
+    # Context manager support: __enter__ returns the mock itself so that
+    # `with repo._get_conn() as conn: conn.execute(...)` also raises.
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    return mock_conn
+
+
+def _make_broken_commit_conn() -> MagicMock:
+    """Return a MagicMock whose commit raises but everything else is fine."""
+    mock_conn = MagicMock(spec=sqlite3.Connection)
+    mock_conn.commit.side_effect = sqlite3.Error("commit error")
+    mock_conn.__enter__ = MagicMock(return_value=mock_conn)
+    mock_conn.__exit__ = MagicMock(return_value=False)
+    return mock_conn
+
+
+class TestDbErrors:
+    def test_open_schema_error_raises_queue_schema_error(self):
+        with patch("sqlite3.connect", side_effect=sqlite3.Error("db error")):
+            repo = QueueRepository(":memory:")
+            with pytest.raises(QueueSchemaError):
+                repo.open()
+
+    def test_close_commit_error_is_swallowed(self, queue_repo):
+        queue_repo._conn = _make_broken_commit_conn()
+        # Should not raise
+        queue_repo.close()
+
+    def test_register_update_page_raises_queue_db_error(self, queue_repo):
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.register_update_page(PAGE_NAME, PAGE_URL)
+
+    def test_mark_page_synced_raises_queue_db_error(self, queue_repo):
+        _register(queue_repo)
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.mark_page_synced(PAGE_NAME, SYNCED_AT)
+
+    def test_set_wiki_modified_at_raises_queue_db_error(self, queue_repo):
+        _register(queue_repo)
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.set_wiki_modified_at(PAGE_NAME, MODIFIED_AFTER)
+
+    def test_get_update_page_status_raises_queue_db_error(self, queue_repo):
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.get_update_page_status(PAGE_NAME)
+
+    def test_list_update_pages_raises_queue_db_error(self, queue_repo):
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.list_update_pages()
+
+    def test_enqueue_items_raises_queue_db_error(self, queue_repo, sword_link):
+        _register(queue_repo)
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.enqueue_items([sword_link])
+
+    def test_mark_failed_raises_queue_db_error(self, queue_repo, sword_link):
+        _register(queue_repo)
+        _enqueue(queue_repo, [sword_link])
+        item = queue_repo.get_pending_items()[0]
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.mark_failed(item.id, utc(2025, 11, 1), "err")
+
+    def test_reset_failed_to_pending_raises_queue_db_error(self, queue_repo):
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.reset_failed_to_pending(max_retries=3)
+
+    def test_get_pending_items_raises_queue_db_error(self, queue_repo):
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.get_pending_items()
+
+    def test_get_queue_stats_raises_queue_db_error(self, queue_repo):
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.get_queue_stats()
+
+    def test_get_items_for_update_page_raises_queue_db_error(self, queue_repo):
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.get_items_for_update_page(PAGE_NAME)
+
+    def test_update_status_via_mark_in_progress_raises_queue_db_error(
+        self, queue_repo, sword_link
+    ):
+        _register(queue_repo)
+        _enqueue(queue_repo, [sword_link])
+        item = queue_repo.get_pending_items()[0]
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.mark_in_progress(item.id, utc(2025, 11, 1, 10))
+
+    def test_update_status_via_mark_complete_raises_queue_db_error(
+        self, queue_repo, sword_link
+    ):
+        _register(queue_repo)
+        _enqueue(queue_repo, [sword_link])
+        item = queue_repo.get_pending_items()[0]
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.mark_complete(item.id, utc(2025, 11, 1, 11))
+
+    def test_update_status_via_mark_skipped_raises_queue_db_error(
+        self, queue_repo, sword_link
+    ):
+        _register(queue_repo)
+        _enqueue(queue_repo, [sword_link])
+        item = queue_repo.get_pending_items()[0]
+        queue_repo._conn = _make_broken_conn()
+        with pytest.raises(QueueDbError):
+            queue_repo.mark_skipped(item.id)

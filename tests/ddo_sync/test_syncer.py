@@ -293,3 +293,34 @@ class TestSyncAll:
         # Should not raise even though Page_A fails
         result = syncer.sync_all()
         assert isinstance(result, SyncStatus)
+
+    def test_mark_complete_raises_item_gets_marked_failed(
+        self, syncer, queue_repo, mock_fetcher, mock_normalizer  # noqa: ARG002
+    ):
+        """If mark_complete raises, the item is counted as a failure."""
+        syncer.register_update_page(PAGE_NAME)
+        syncer.sync_update_page(PAGE_NAME)
+
+        # Make mark_complete raise for every item
+        original_mark_complete = queue_repo.mark_complete
+
+        def raise_on_complete(item_id, completed_at):
+            raise Exception("persistence failure")
+
+        queue_repo.mark_complete = raise_on_complete
+
+        success, failures = syncer.process_queue()
+
+        queue_repo.mark_complete = original_mark_complete
+        assert failures >= 1
+
+    def test_refresh_wiki_timestamp_api_failure_logs_warning_and_proceeds(
+        self, syncer, mock_api_client
+    ):
+        """If get_last_modified raises, sync_all still completes without error."""
+        syncer.register_update_page(PAGE_NAME)
+        mock_api_client.get_last_modified.side_effect = Exception("API is down")
+
+        # Should not raise; the exception is caught and logged as a warning
+        result = syncer.sync_all()
+        assert isinstance(result, SyncStatus)
