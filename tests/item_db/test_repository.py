@@ -7,7 +7,12 @@ import pytest
 
 from item_db import ItemFilter, ItemRepository
 from item_db._writer import _ItemWriter
-from item_db.exceptions import DuplicateItemError, ItemDbError, ItemNotFoundError, SchemaError
+from item_db.exceptions import (
+    DuplicateItemError,
+    ItemDbError,
+    ItemNotFoundError,
+    SchemaError,
+)
 from item_normalizer.models import DDOItem, Enchantment
 
 # ── Lifecycle ────────────────────────────────────────────────────────────────

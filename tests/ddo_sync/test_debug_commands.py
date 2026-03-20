@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from ddowiki_scraper.exceptions import FetchError, RobotsTxtError
 from ddo_sync.debug_commands import normalize_item
-
+from ddowiki_scraper.exceptions import FetchError, RobotsTxtError
 
 FAKE_LOOT_DB = Path("/tmp/loot.db")
 ITEM_NAME = "Cloak of Shadows"
@@ -53,9 +51,11 @@ def _setup_fetcher_mock(mock_fetcher_cls, side_effect=None, html=FAKE_HTML):
 
 
 def test_robots_txt_error_returns_early(capsys):
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls, side_effect=RobotsTxtError("blocked"))
 
@@ -71,9 +71,11 @@ def test_fetch_error_returns_early(capsys):
     exc = FetchError("not found")
     exc.status_code = 404
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls, side_effect=exc)
 
@@ -89,9 +91,11 @@ def test_fetch_error_returns_early(capsys):
 def test_successful_fetch_upsert_false_calls_save():
     mock_item = _make_mock_item()
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls)
         mock_normalizer_cls.return_value.normalize.return_value = mock_item
@@ -109,9 +113,11 @@ def test_successful_fetch_upsert_false_calls_save():
 def test_successful_fetch_upsert_true_calls_upsert():
     mock_item = _make_mock_item()
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls)
         mock_normalizer_cls.return_value.normalize.return_value = mock_item
@@ -130,9 +136,11 @@ def test_enchantment_with_value_prints_value(capsys):
     enc = _make_enchantment("Devotion", value=90)
     mock_item = _make_mock_item(enchantments=[enc])
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls)
         mock_normalizer_cls.return_value.normalize.return_value = mock_item
@@ -151,9 +159,11 @@ def test_enchantment_without_value_omits_value(capsys):
     enc = _make_enchantment("Striding", value=None)
     mock_item = _make_mock_item(enchantments=[enc])
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls)
         mock_normalizer_cls.return_value.normalize.return_value = mock_item
@@ -174,9 +184,11 @@ def test_named_set_present_prints_named_set(capsys):
     named_set.name = "Shadow's Embrace"
     mock_item = _make_mock_item(named_set=named_set)
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls)
         mock_normalizer_cls.return_value.normalize.return_value = mock_item
@@ -194,9 +206,11 @@ def test_named_set_present_prints_named_set(capsys):
 def test_named_set_none_does_not_print_named_set(capsys):
     mock_item = _make_mock_item(named_set=None)
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls)
         mock_normalizer_cls.return_value.normalize.return_value = mock_item
@@ -216,9 +230,11 @@ def test_source_present_prints_source_quests(capsys):
     source.quests = ["The Pit", "Tangleroot Gorge"]
     mock_item = _make_mock_item(source=source)
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls)
         mock_normalizer_cls.return_value.normalize.return_value = mock_item
@@ -236,9 +252,11 @@ def test_source_present_prints_source_quests(capsys):
 def test_source_none_does_not_print_source(capsys):
     mock_item = _make_mock_item(source=None)
 
-    with patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls, \
-         patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls, \
-         patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls:
+    with (
+        patch("ddo_sync.debug_commands.WikiFetcher") as mock_fetcher_cls,
+        patch("ddo_sync.debug_commands.ItemNormalizer") as mock_normalizer_cls,
+        patch("ddo_sync.debug_commands.ItemRepository") as mock_repo_cls,
+    ):
 
         _setup_fetcher_mock(mock_fetcher_cls)
         mock_normalizer_cls.return_value.normalize.return_value = mock_item
