@@ -304,12 +304,12 @@ class TestSyncAll:
         # Make mark_complete raise for every item
         original_mark_complete = queue_repo.mark_complete
 
-        def raise_on_complete(item_id, completed_at):
+        def raise_on_complete(_item_id, _completed_at):
             raise Exception("persistence failure")
 
         queue_repo.mark_complete = raise_on_complete
 
-        success, failures = syncer.process_queue()
+        _success, failures = syncer.process_queue()
 
         queue_repo.mark_complete = original_mark_complete
         assert failures >= 1

@@ -56,7 +56,9 @@ class TestExtractName:
         self, parser: WikiPageParser
     ) -> None:
         """No h1 and no wikitable both absent triggers ParseError."""
-        html = "<html><body><table><tr><td>Not a wikitable</td></tr></table></body></html>"
+        html = (
+            "<html><body><table><tr><td>Not a wikitable</td></tr></table></body></html>"
+        )
         with pytest.raises(ParseError, match="Could not extract item name"):
             parser.parse(html, WIKI_URL)
 
@@ -374,7 +376,7 @@ class TestExtractEnchantmentsEdgeCases:
     def test_enchantments_th_with_no_td_returns_empty(
         self, parser: WikiPageParser
     ) -> None:
-        """Enchantments <th> whose <tr> has no <td> falls through to strategy 2 (branch 317->314)."""
+        """Enchantments <th> with no <td> in its <tr> falls through to strategy 2."""
         html = """
         <html><body>
         <h1 id="firstHeading">Item:TestSword</h1>

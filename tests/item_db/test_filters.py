@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 
 from item_db import ItemFilter, ItemRepository
 from item_db._filters import _build_where_clause
 from item_normalizer.models import DDOItem, ItemSource
-
 
 # ── _build_where_clause unit tests ───────────────────────────────────────────
 
@@ -181,8 +182,6 @@ class TestFilterIntegration:
         assert results[0].name == cloak_item.name
 
     def test_dropped_by_filter(self, repo: ItemRepository) -> None:
-        from datetime import datetime, timezone
-
         item_with_dropped_by = DDOItem(
             name="Dragon Loot",
             wiki_url="https://ddowiki.com/page/Item:Dragon_Loot",
@@ -194,8 +193,6 @@ class TestFilterIntegration:
         assert len(results) == 1
         assert results[0].name == "Dragon Loot"
 
-    def test_drops_in_quest_no_match(
-        self, populated_repo: ItemRepository
-    ) -> None:
+    def test_drops_in_quest_no_match(self, populated_repo: ItemRepository) -> None:
         results = populated_repo.search(ItemFilter(drops_in_quest="NonExistentQuest"))
         assert results == []

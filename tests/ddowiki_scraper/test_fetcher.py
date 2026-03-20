@@ -509,9 +509,7 @@ class TestWikiFetcherRobotsErrors:
             fetcher._can_fetch("https://ddowiki.com/page/Item:Sword")
 
     @patch("ddowiki_scraper.fetcher.RobotFileParser")
-    def test_robots_txt_fail_open_returns_true(
-        self, mock_parser_class: Mock
-    ) -> None:
+    def test_robots_txt_fail_open_returns_true(self, mock_parser_class: Mock) -> None:
         """Test that _can_fetch returns True when robots.txt fails and fail_open=True."""
         config = WikiFetcherConfig(
             base_url="https://ddowiki.com",
@@ -558,7 +556,9 @@ class TestWikiFetcherSyncErrors:
         mock_rate_limiter.wait_sync = Mock()
         fetcher = WikiFetcher(default_config, rate_limiter=mock_rate_limiter)
 
-        with patch.object(fetcher, "_do_fetch_sync", side_effect=Exception("unexpected")):
+        with patch.object(
+            fetcher, "_do_fetch_sync", side_effect=Exception("unexpected")
+        ):
             with pytest.raises(FetchError):
                 fetcher.fetch_item_page("SomeItem")
 
