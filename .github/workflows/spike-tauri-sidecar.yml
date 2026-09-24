@@ -26,10 +26,12 @@ jobs:
         run: |
           export DDOLOOT_TOKEN=t
           EXE=$(ls src-tauri/binaries/* | head -1)
-          "$EXE" > out.txt & sleep 8
+          tail -f /dev/null | "$EXE" > out.txt & 
+          for i in $(seq 1 120); do grep -q PORT out.txt && break; sleep 0.5; done
           PORT=$(sed -n 's/PORT=//p' out.txt | head -1)
+          sleep 2
           curl -sf -H "Authorization: Bearer t" http://127.0.0.1:$PORT/api/v1/health
-          kill %1 || true
+          pkill -f tail || true
       - name: Build Tauri app
         run: npm install && npx tauri build --debug
       - name: Launch app and check UI reached sidecar

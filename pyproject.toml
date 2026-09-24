@@ -41,6 +41,7 @@ dependencies = [
 
 [project.scripts]
 ddoloot = "ddo_sync.cli:main"
+ddoloot-ui = "ddoloot_ui.app:main"
 
 [project.urls]
 "Homepage" = "https://github.com/Amateretsu/ddoloot"
@@ -73,6 +74,10 @@ test = [
     "tomli",           # required for pytest-cov to parse pyproject.toml on Python < 3.11
 ]
 
+gui = [
+    "PySide6>=6.5.0",
+]
+
 exe = [
     "setuptools",
     "wheel",
@@ -82,7 +87,7 @@ exe = [
 ]
 
 dev = [
-    "ddoloot[lint,test,exe]",
+    "ddoloot[lint,test,exe,gui]",
     "mypy",
     "fire",
     "better_exceptions",
@@ -106,7 +111,7 @@ line-length = 88
 
 [tool.isort]
 profile = "black"
-known_first_party = ["ddowiki_scraper", "item_normalizer", "item_db", "ddo_sync"]
+known_first_party = ["ddowiki_scraper", "item_normalizer", "item_db", "ddo_sync", "ddoloot_ui"]
 
 
 [tool.ruff]

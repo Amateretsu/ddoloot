@@ -37,6 +37,7 @@ git clone https://github.com/Amateretsu/ddoloot.git
 cd ddoloot
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install --upgrade pip
 pip install -e ".[test]"
 ```
 
