@@ -1,6 +1,21 @@
 # Exclude our Data files from Git Source Control
 **data
 
+# Exclude non-app files: AI agent config, learning notes, spikes, internal docs
+.claude/
+CLAUDE.md
+AGENTS.md
+CONTEXT.md
+learning/
+spike/
+docs/agents/
+docs/research/
+
+# OS / editor cruft
+.DS_Store
+.idea/
+node_modules/
+
 # Exclude vscode specific configs
 .vscode/
 
