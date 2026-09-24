@@ -1,0 +1,50 @@
+# PROTOTYPE (issue #15): throwaway validation of Tauri + PyInstaller FastAPI sidecar.
+name: spike-tauri-sidecar
+on: { workflow_dispatch: {}, push: { branches: [prototype/tauri-sidecar-spike] } }
+jobs:
+  spike:
+    strategy:
+      fail-fast: false
+      matrix: { os: [windows-latest, macos-latest, ubuntu-22.04] }
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { working-directory: spike/tauri-sidecar, shell: bash } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf xvfb
+      - name: Freeze sidecar
+        run: ./build-sidecar.sh
+      - name: Smoke-test frozen sidecar alone
+        run: |
+          export DDOLOOT_TOKEN=t
+          EXE=$(ls src-tauri/binaries/* | head -1)
+          "$EXE" > out.txt & sleep 8
+          PORT=$(sed -n 's/PORT=//p' out.txt | head -1)
+          curl -sf -H "Authorization: Bearer t" http://127.0.0.1:$PORT/api/v1/health
+          kill %1 || true
+      - name: Build Tauri app
+        run: npm install && npx tauri build --debug
+      - name: Launch app and check UI reached sidecar
+        run: |
+          export SPIKE_REPORT="$PWD/report.txt"; : > "$SPIKE_REPORT"
+          APP=$(find src-tauri/target/debug -maxdepth 1 -type f -perm -u+x -name 'sidecar-spike*' | head -1)
+          [ "$RUNNER_OS" = "Windows" ] && APP=src-tauri/target/debug/sidecar-spike.exe
+          if [ "$RUNNER_OS" = "Linux" ]; then xvfb-run -a "$APP" & else "$APP" & fi
+          sleep 75
+          cat "$SPIKE_REPORT"
+          grep -q health-ok "$SPIKE_REPORT"
+      - name: Orphan check (sidecar should die with the app)
+        run: |
+          pkill -f sidecar-spike || taskkill //F //IM sidecar-spike.exe || true
+          sleep 3
+          if [ "$RUNNER_OS" = "Windows" ]; then tasklist | grep -i ddoloot-sidecar && echo ORPHAN || echo clean; else pgrep -fl ddoloot-sidecar && echo ORPHAN || echo clean; fi
+      - uses: actions/upload-artifact@v4
+        with: { name: "bundle-${{ matrix.os }}", path: spike/tauri-sidecar/src-tauri/target/debug/bundle }

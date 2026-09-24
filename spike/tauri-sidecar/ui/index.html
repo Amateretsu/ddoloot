@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>Sidecar spike</title>
+<pre id="out">starting…</pre>
+<script>
+(async () => {
+  const out = document.getElementById("out");
+  const rep = (m) => window.__TAURI__.core.invoke("ui_report", { msg: m });
+  rep("script started");
+  try {
+    const { port, token } = await window.__TAURI__.core.invoke("sidecar_info");
+    let r; for (let i = 0; i < 10; i++) { try { r = await fetch(`http://127.0.0.1:${port}/api/v1/health`, { headers: { Authorization: `Bearer ${token}` } }); break; } catch (e) { rep("attempt " + i + " " + e); await new Promise(z => setTimeout(z, 2000)); } }
+    if (!r) throw new Error("no response");
+    out.textContent = "SIDECAR OK " + JSON.stringify(await r.json()); rep("fetch ok");
+  } catch (e) { out.textContent = "SIDECAR FAIL " + e; rep("fetch fail " + e); }
+})();
+</script>
